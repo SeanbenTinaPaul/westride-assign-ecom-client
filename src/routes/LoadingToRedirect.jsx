@@ -1,11 +1,14 @@
 //animation loading during routing/redirect
 //use this component when need to force redirect to '/' page
+//parent → ProtecRouterAdmin.jsx + ProtectRouteUser.jsx
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { useToast } from "@/components/hooks/use-toast";
 
 export const LoadingToRedirect = () => {
    const [count, setCount] = useState(3);
    const [redirect, setRedirect] = useState(false);
+   const { toast } = useToast();
 
    //countdown
    //useEffect() ทำงานเมื่อ Component ถูก render ครั้งแรก (เมื่อ component ถูกสร้างขึ้น)
@@ -13,14 +16,19 @@ export const LoadingToRedirect = () => {
       const interval = setInterval(() => {
          setCount((currentCount) => {
             if (currentCount === 1) {
+               // toast({
+               //    variant: "destructive",
+               //    title: "Error!",
+               //    description: "Permission Denied"
+               // });
                clearInterval(interval);
                setRedirect(true); //อนุญาตให้ redirect
             }
-            return currentCount - 1;
+            return currentCount - 1; //loop count = --count
          });
       }, 1000);
-
-      return () => clearInterval(interval); // ให้ clearInterval เมื่อ component ถูก unmount
+     
+      return () => clearInterval(interval); 
    }, []); //add [] to at end to avoid infinite loop
 
    if (redirect) {

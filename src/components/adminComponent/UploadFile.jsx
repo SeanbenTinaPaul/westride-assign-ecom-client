@@ -1,30 +1,47 @@
-//parent→ FormProduct.jsx
-import React, { useState, createRef } from "react";
+//parent→ FormProduct.jsx, FormEditProd.jsx
+import React, { useState, createRef, useEffect } from "react";
 import PropTypes from "prop-types";
-import { toast } from "react-toastify";
 import Resizer from "react-image-file-resizer";
+//icons
+import IconX from "../../utilities/IconX";
+import { ImageDown, AlertCircle } from "lucide-react";
+import { useToast } from "@/components/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+//API
 import { delImg, uploadFiles } from "../../api/ProductAuth";
-
+//Global state
 import useEcomStore from "../../store/ecom-store";
+//use for making text color auto-contrast
+import { calculateTextColor } from "../../utilities/useContrastText";
+import { validateBannerDimension } from "@/utilities/validateBannerDimension";
 
-import ColorThief from "colorthief"; //use for making text color auto-contrast
-
-const UploadFile = ({ inputForm, setInputForm }) => {
+function UploadFile({
+   inputForm,
+   setInputForm,
+   cancelImg,
+   setCancelImg,
+   isSubmitImg,
+   setIsSubmitImg
+}) {
    const token = useEcomStore((state) => state.token);
    const [isLoading, setIsLoading] = useState(false);
-   const [textColors, setTextColors] = useState({}); // Store text color for each image
+   const [bgColors, setBgColors] = useState({}); // Store text color for each image
    const fileInputRef = createRef(); // Create a ref for the file input
    // const [selectedFiles, setSelectedFiles] = useState([]); // State to keep track of selected files
-   
-   // imgDataArr used to save image-data obj
+   const [alert, setAlert] = useState(null); //for alert Warning!
+   const { toast } = useToast();
+   const [imageCount, setImageCount] = useState(inputForm.images.length); // Add state for image count
+   // imgDataArr used to save image-data obj → both existing and new ► from cloud ONLY
    let imgDataArr = inputForm.images; //images → empty array
    // console.log("inputForm before img upload->", inputForm);
    // console.log("imgDataArr->", imgDataArr);
-   
-   const handleOnChange = (e) => {
-      console.log("inputForm after img upload->", inputForm);
+
+   const handleOnChange = async (e) => {
+      // console.log("inputForm after img upload->", inputForm);
+      //IF fileInputRef.current.value = "" → fileList.length === 0
       const fileList = e.target.files;
+      // setIsLoading(true);
       // setSelectedFiles(Array.from(fileList)); // Update selected files state
       /*fileList === {
                         "0": { lastModified : 1736416405065,
@@ -34,32 +51,97 @@ const UploadFile = ({ inputForm, setInputForm }) => {
 	                            type : "image/jpeg",
 	                            webkitRelativePath : ""
                               },
-                        "1": {...}
+                        "1": {...},
+                        "length": 2
                      }
       */
-      //after user click 'select' for images → files === true
+
+      //after user click select some images → fileList === true
       if (fileList) {
-         setIsLoading(!isLoading);
+         // console.log("fileList come->", fileList);
+         // console.log("fileList len come->", fileList.length);
+         setIsLoading(true);
          let successCount = 0; // Count the number of successful uploads
+
+         // Update file input display immediately with total images
+         const existingImagesCount = inputForm.images.length;
+         const newImagesCount = fileList.length;
+         let totalImages = existingImagesCount + newImagesCount;
+         setImageCount(totalImages);
+
+         // if (fileInputRef.current) {
+         //    fileInputRef.current.value = ""; // Reset first
+         //    fileInputRef.current.value = `${totalImages} image(s)`;
+         // }
+
          // loop to upload each image
          for (let i = 0; i < fileList.length; i++) {
-            console.log(fileList[i]);
+            // console.log(`fileList[${i}]->`, fileList[i]);
             //validate if it is image → type: "image/jpeg" , "image/png"
             if (!fileList[i].type.startsWith("image/")) {
-               toast.error(`${fileList[i].name} is not image file`);
+               setIsLoading(false);
+               setAlert(
+                  <Alert variant='destructive'>
+                     <AlertCircle className='h-4 w-4' />
+                     <AlertTitle>Warning!</AlertTitle>
+                     <AlertDescription>
+                        `{fileList[i].name.slice(0, 10)}..{fileList[i].name.slice(-7)} is NOT image
+                        file`
+                     </AlertDescription>
+                  </Alert>
+               );
+               //reset file name in input if NOT image
+               fileInputRef.current.value = "";
+
+               //update image count
+               totalImages--;
+               setImageCount(totalImages);
+
+               //hide this alert after 3 seconds
+               setTimeout(() => {
+                  setAlert(null);
+               }, 4000);
                continue; //skip Resizer.imageFileResizer()
+               // toast.error(`${fileList[i].name} is not image file`);
             }
-            //Image Resize
+
+            //check isBanner
+            // banner category===38, validate dimensions
+            if (inputForm.categoryId === 38) {
+               try {
+                  await validateBannerDimension(fileList[i]);
+               } catch (error) {
+                  setIsLoading(false);
+                  setAlert(
+                     <Alert variant='destructive'>
+                        <AlertCircle className='h-4 w-4' />
+                        <AlertTitle>Invalid Banner Dimensions</AlertTitle>
+                        <AlertDescription>{error.message}</AlertDescription>
+                     </Alert>
+                  );
+                  totalImages--;
+                  setImageCount(totalImages);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                  setTimeout(() => setAlert(null), 4000);
+                  continue;
+               }
+            }
+
+            //// for image files section ////
+
+            setIsLoading(true);
+
+            //Image Resize and upload | 300,480,720,900,1080,1200,1440,1920 | JPEG, PNG, WEBP
             Resizer.imageFileResizer(
                fileList[i],
-               720,
-               720,
-               "JPEG",
+               1080,
+               1080,
+               "WEBP",
                100,
                0,
                (binaryImg) => {
                   // data === base64 of image
-                  //ProductAuth.jsx → backend
+                  //ProductAuth.jsx → backend → cloudinary (not db yet)
                   uploadFiles(token, binaryImg)
                      .then((res) => {
                         // console.log('chaeck res.data',res.data);
@@ -68,15 +150,43 @@ const UploadFile = ({ inputForm, setInputForm }) => {
                                  message: "Upload success",
                                  data: {asset_id:"4a1b",...}
                                  } 
-                        */
+                         */
+
+                        /*** ให้ทำ ถ้า res.data.data.etag เจอใน imgDataArr[i].etag
+                       → call delImg(token, public_id)
+                       */
+                        if (imgDataArr.length > 0) {
+                           for (let i = 0; i < imgDataArr.length; i++) {
+                              if (imgDataArr[i].etag === res.data.data.etag) {
+                                 //ลบตัวเก่า เก็บตัวใหม่
+                                 delImg(token, imgDataArr[i].public_id);
+                                 //ลบตัวเก่าออกจาก imgDataArr ก่อน push ตัวใหม่
+                                 imgDataArr.splice(i, 1);
+                                 toast({
+                                    variant: "destructive",
+                                    title: "Found Duplicate Images!",
+                                    description: `We can keep the latest one only.`
+                                 });
+                                 //update image count
+                                 totalImages--;
+                              }
+                           }
+                           //update image count
+                           setImageCount(totalImages);
+                        }
+
+                        // console.log("imgDataArr->", imgDataArr);
                         imgDataArr.push(res.data.data);
                         setInputForm({
                            ...inputForm,
                            images: imgDataArr
                         });
+                        // console.log("imgDataArr-++>", imgDataArr);
+                        setIsLoading(false);
                      })
                      .catch((err) => {
                         console.log(err);
+                        setIsLoading(false);
                      });
                },
                "base64" //encode img to base64 binary
@@ -85,97 +195,235 @@ const UploadFile = ({ inputForm, setInputForm }) => {
          }
          // Show toast success message only if all uploads were successful
          if (successCount === fileList.length && successCount > 0) {
-            toast.success(`Upload ${successCount} images success!!!`);
+            toast({
+               title: "Upload Images Success!",
+               description: `uploaded: ${successCount} image(s)`
+            });
+
+            if (fileList.length === 0) {
+               fileInputRef.current.value = ""; // Reset the file input value
+               setIsLoading(false); //if user click 'Choose file' but click 'Cancel' img selected → no animation
+            }
+            // setIsLoading(false);
+            // Reset file input after successful upload
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            // toast.success(`Upload ${successCount} images success!!!`);
          }
-         if(fileList.length === 0) fileInputRef.current.value = ""; // Reset the file input value
       }
    };
 
-   //del img preview when click 'x'
+   //click 'Choose file'
+   // const handleButtonClick = () => {
+   //    fileInputRef.current?.click();
+   // };
+
+   //del img in cloudinary + preview, when click 'x'
+   //ProductAuth.jsx → backend → cloudinary (Not DB yet)
    const handleDelImg = (public_id) => {
       delImg(token, public_id)
          .then((res) => {
-            // console.log(res);
+            // console.log("res del img in cloud", res);
+            //filteredImg → remaining images
             const filteredImg = imgDataArr.filter((obj) => {
                return obj.public_id !== public_id;
             });
-            console.log(filteredImg);
+            // console.log(filteredImg);
+            // Update inputForm with remaining images
             setInputForm({
                ...inputForm,
                images: filteredImg
             });
-            // setSelectedFiles([]); // Reset selected files state
-            if(filteredImg.length === 0) fileInputRef.current.value = ""; // Reset the file input value
+            // Update image count after deletion
+            setImageCount(filteredImg.length);
+            // Always reset file input after deletion
+            if (fileInputRef.current) {
+               fileInputRef.current.value = "";
+            }
+
+            // // Update selectedFiles state to match remaining images
+            // setSelectedFiles((prev) => {
+            //    const updatedFiles = [...prev];
+            //    // Remove one file from selectedFiles
+            //    updatedFiles.pop();
+            //    return updatedFiles;
+            // });
+            /// Reset file input if no images left
+
+            // console.log("filteredImg.length->", filteredImg.length);
+            // If no images remain, ensure everything is reset
+            if (filteredImg.length === 0) {
+               setImageCount(0);
+            }
+
+            // Update file input display after deletion
+            // if (fileInputRef.current) {
+            //    fileInputRef.current.value = ""; // Reset first
+            //    fileInputRef.current.value = `${filteredImg.length} image(s)`;
+            // }
          })
          .catch((err) => {
             console.log(err);
          });
    };
 
+   //Del all new added images in Cloudinary if user click 'Cancel'
+   //and setInputForm({images: []}) but leave only existing images
+   //only non-db clound img has type = 'upload'
+   useEffect(() => {
+      if (cancelImg) {
+         const cleanup = async () => {
+            try {
+               // Filter out newly uploaded images (they have type === 'upload')
+               const newlyUploadedImages = imgDataArr.filter((img) => img.type === "upload");
+               // Delete newly uploaded images from cloud
+               for (const img of newlyUploadedImages) {
+                  await delImg(token, img.public_id);
+               }
+               // Keep only original images from database
+               const originalImages = imgDataArr.filter((img) => img.type !== "upload");
+               // setInputForm((prev) => ({
+               //    ...prev,
+               //    images: originalImages
+               // }));
+               /*
+               === setInputForm({
+                   ...inputForm,
+                   images: originalImages
+                   }); but SAFE
+               */
+
+               // Reset file input
+               if (fileInputRef.current) {
+                  fileInputRef.current.value = "";
+               }
+               // Update image count
+               setImageCount(originalImages.length);
+            } catch (err) {
+               console.error("Error cleaning up images:", err);
+               toast({
+                  variant: "destructive",
+                  title: "Error",
+                  description: "Failed to clean up uploaded images"
+               });
+            }
+         };
+         cleanup();
+         setCancelImg(false);
+      }
+      if (isSubmitImg) {
+         if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+         }
+         setIsSubmitImg(false);
+      }
+   }, [cancelImg, isSubmitImg, token, imgDataArr]);
+
+   // if (cancelImg) {
+   //    for (let i = 0; i < imgDataArr.length; i++) {
+   //       if (imgDataArr[i].type === "upload") {
+   //          delImg(token, imgDataArr[i].public_id);
+   //       }
+   //       setInputForm({ images: [] });
+   //    }
+   //    setCancelImg(false);
+   // }
+
    //calculate text color - colorThief
-   const calculateTextColor = (imgElement, assetId) => {
-      const colorThief = new ColorThief();
-      const [r, g, b] = colorThief.getColor(imgElement);
-      const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b; // Calculate luminance
-      const contrastColor = luminance > 128 ? "black" : "white"; // Choose contrast color
-      setTextColors((prev) => ({ ...prev, [assetId]: contrastColor }));
+   //contrastColor is 'black' or 'white'
+   const handleCalculateTextColor = (imgElement, assetId) => {
+      const contrastColor = calculateTextColor(imgElement);
+      setBgColors((prev) => ({ ...prev, [assetId]: contrastColor }));
    };
 
+   // const calculateTextColor = (imgElement, assetId) => {
+   //    const colorThief = new ColorThief();
+   //    const [r, g, b] = colorThief.getColor(imgElement);
+   //    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b; // Calculate luminance
+   //    const contrastColor = luminance > 128 ? "black" : "white"; // Choose contrast color
+   //    setTextColors((prev) => ({ ...prev, [assetId]: contrastColor }));
+   // };
    return (
       <div>
          <div className='flex flex-wrap gap-1 justify-start mx-2 my-3'>
+            {/* error not picture type */}
+            {alert && <div className='mb-4'>{alert}</div>}
+            {/* animate during upload */}
+            {isLoading && (
+               <div className='w-40 text-slate-900 drop-shadow-sm flex items-center justify-center'>
+                  <ImageDown className='size-8 animate-bounceScale' />
+               </div>
+            )}
+            {/* display selected(uploaded) images */}
             {/*access url -> inputForm.images[i].data.url */}
+            {/* {console.log("inputForm.images", inputForm.images)} */}
             {inputForm.images &&
                inputForm.images.map((obj) => {
                   return (
                      <div
                         key={obj.asset_id}
-                        className='relative hover:z-50'
+                        className='relative hover:z-22'
                      >
                         <img
                            src={obj.url}
                            alt='product-img'
-                           className='h-24 hover:scale-150 transition duration-300'
+                           className='h-24 hover:shadow-lg hover:scale-150 transition duration-500 ease-in-out'
                            crossOrigin='anonymous' // Needed for Color Thief
-                           onLoad={(e) => calculateTextColor(e.target, obj.asset_id)}
+                           onLoad={(e) => handleCalculateTextColor(e.target, obj.asset_id)}
                         />
                         <span
                            title='Delete image'
-                           className={`absolute top-0 right-1 font-bold opacity-70 cursor-pointer`}
-                           style={{ color: textColors[obj.asset_id] || "black" }}
+                           className={`absolute top-0 right-2 w-4 opacity-30 cursor-pointer hover:opacity-100 hover:rotate-90 hover:scale-y-125 transition duration-500`}
                            onClick={() => handleDelImg(obj.public_id)}
                         >
-                           X
+                           <IconX
+                              bgColor={bgColors[obj.asset_id]}
+                              className={`${
+                                 bgColors[obj.asset_id] === "black" ? "text-black " : "text-white"
+                              } hover:text-red-600 `}
+                           />
                         </span>
                      </div>
                   );
                })}
          </div>
-         <div>
+         <div className='flex items-center gap-4'>
             <input
                type='file'
                name='images'
                ref={fileInputRef} // Attach the ref to the file input
                multiple //ให้สามารถเลือกไฟล์มากกว่า 1
-               className='form-control rounded-md mb-2'
+               className='form-control bg-transparent block w-32 text-sm text-transparent rounded-xl file:rounded-xl '
                onChange={handleOnChange}
             />
-            {/* <div>
+            <span className='text-sm text-gray-500'>
+               {imageCount > 0 ? `${imageCount} image(s)` : "No images selected"}
+            </span>
+            {/* <button
+               onClick={handleButtonClick}
+               className='px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2'
+            >
+               Choose Files
+            </button>
+            <span className='text-sm text-gray-500'>
                {selectedFiles.length === 0
                   ? "No file chosen"
                   : selectedFiles.length === 1
                   ? selectedFiles[0].name
                   : `${selectedFiles.length} images selected`}
-            </div> */}
+            </span> */}
          </div>
       </div>
    );
-};
+}
 
 UploadFile.propTypes = {
    inputForm: PropTypes.object,
    setInputForm: PropTypes.func,
-   dominantColor: PropTypes.any
+   dominantColor: PropTypes.any,
+   cancelImg: PropTypes.bool,
+   setCancelImg: PropTypes.func,
+   isSubmitImg: PropTypes.bool,
+   setIsSubmitImg: PropTypes.func
 };
 
 export default UploadFile;
