@@ -230,26 +230,7 @@ function ViewProdUser(props) {
             setProdOnOrder(res.data.prodOnOrder);
             await getCategory(); //random solution to trigger contents in navigte path to rerender
 
-            // const fetchedProduct = res.data.data; // Your fetched product data
-            // const cartItem = carts.find((item) => item.id === fetchedProduct.id);
-            // if (cartItem) {
-            //    setProductData({
-            //       ...fetchedProduct,
-            //       countCart: cartItem.countCart,
-            //       buyPrice: cartItem.buyPrice,
-            //       buyPriceNum: cartItem.buyPriceNum,
-            //       preferDiscount: cartItem.preferDiscount
-            //    });
-            // } else {
-            //    const { buyPrice, buyPriceNum, preferDiscount } = calDiscountedPrice();
-            //    setProductData({
-            //       ...fetchedProduct,
-            //       countCart: 0,
-            //       buyPrice,
-            //       buyPriceNum,
-            //       preferDiscount
-            //    });
-            // }
+            
          } catch (err) {
             console.error("Error fetching product:", err);
             toast({
@@ -388,7 +369,7 @@ function ViewProdUser(props) {
          </div>
          {/* {console.log("prodObj", prodObj)} */}
          {/* {console.log("productData", productData)} */}
-         <main className='inline-flex p-6 w-[80dvw] h-[60dvh] min-w-[800px] bg-card shadow-md rounded-xl'>
+         <main className='inline-flex p-6 w-[80dvw] h-[70dvh] min-w-[800px] bg-card shadow-md rounded-xl'>
             {/* Image*/}
             <article className='w-1/2 h-full '>
                <CarouselThumnailProd
