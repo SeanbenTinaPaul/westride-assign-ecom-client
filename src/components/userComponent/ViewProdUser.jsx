@@ -408,7 +408,7 @@ function ViewProdUser(props) {
                            {productData.avgRating?.toFixed(1)}
                         </span>
                      </div>
-                     <Button
+                     {user && token && (<Button
                         variant='ghost'
                         size='icon'
                         onClick={handleFavorite}
@@ -419,7 +419,7 @@ function ViewProdUser(props) {
                               isFavorite ? "text-red-500 fill-current" : "text-gray-500"
                            }`}
                         />
-                     </Button>
+                     </Button>)}
                   </section>
                   <section>
                      <header className='h-24 px-4 py-2  '>
