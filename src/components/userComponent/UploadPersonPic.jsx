@@ -67,7 +67,7 @@ function UploadPersonPic({
             try {
                // Del previous image if exists
                if (inputForm.image?.public_id || inputForm.public_id) {
-                  console.log("Deleting previous image:", inputForm.image.public_id);
+                  // console.log("Deleting previous image:", inputForm.image.public_id);
                   await delImg(token, inputForm.image?.public_id || inputForm.public_id);
                }
                const res = await uploadFiles(token, binaryPic);
@@ -105,7 +105,7 @@ function UploadPersonPic({
    const handleDelImg = async (public_id) => {
       try {
          const res = await delImg(token, public_id);
-         console.log("res del img in cloud", res);
+         // console.log("res del img in cloud", res);
          setInputForm({
             ...inputForm,
             image: "",
@@ -133,7 +133,7 @@ function UploadPersonPic({
                // console.log("inputForm.previousImgId image:::", inputForm.previousImgId);
                if (previousImgId || inputForm.previousImgId) {
                   const res = await delImg(token, previousImgId || inputForm.previousImgId);
-                  console.log("res del img in cloud", res);
+                  // console.log("res del img in cloud", res);
                   setInputForm((prev) => ({
                      ...prev,
                      description: "",

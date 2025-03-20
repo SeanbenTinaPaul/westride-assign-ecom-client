@@ -5,7 +5,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 //backend res.send()
 export const createProduct = async (token, form) => {
-   console.log("form to create prod", form);
+   // console.log("form to create prod", form);
    return await axios.post(`${apiUrl}/api/product`, form, {
       headers: {
          Authorization: `Bearer ${token}`

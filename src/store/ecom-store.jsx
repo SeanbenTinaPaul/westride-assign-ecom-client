@@ -80,8 +80,8 @@ const ecomStore = (set, get) => ({
       try {
          const res = await getCartUser(get().token);
          // console.clear();
-         console.log("cart now", carts);
-         console.log("fetchUserCart", res.data);
+         // console.log("cart now", carts);
+         // console.log("fetchUserCart", res.data);
          if (res.data.ProductOnCart?.length > 0 || res.data.success) {
             if (carts.length === 0) {
                const editKeyProdArr = res.data.ProductOnCart.map((prod) => {
@@ -97,7 +97,7 @@ const ecomStore = (set, get) => ({
                set({ carts: editKeyProdArr });
                get().updateStatusSaveToCart(true);
             } else {
-               console.log("fetch carts + carts", carts);
+               // console.log("fetch carts + carts", carts);
                carts.forEach((cartItem) => {
                   const existIndex = res.data.ProductOnCart.findIndex(
                      (prod) => prod.productId === cartItem.id
@@ -150,7 +150,7 @@ const ecomStore = (set, get) => ({
          newCarts = [...carts, { ...productObj, countCart: 1 }];
       }
       set({ carts: newCarts });
-      console.log("new carts", newCarts);
+      // console.log("new carts", newCarts);
       get().updateStatusSaveToCart(false);
       get().synCartwithProducts(productObj);
    },
@@ -176,7 +176,7 @@ const ecomStore = (set, get) => ({
       }));
       //force to save cart to DB again if user remove items after saving them to DB
       get().updateStatusSaveToCart(false);
-      console.log("removeCart", prodId);
+      // console.log("removeCart", prodId);
       //if user rm carts to empty BUT carts records is wrtitten to DB ► reset confirmation states and rm cart in DB
       if (get().carts.length === 0) {
          set({ isSaveToCart: false, showLogoutConfirm: false });

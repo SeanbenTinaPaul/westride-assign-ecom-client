@@ -78,8 +78,8 @@ function CartInfo(props) {
       try {
          //need req.body.carts: [{id, countCart, count, price, buyPriceNum, discount, productId},{..}]
          const res = await createCartUser(token, { carts: carts });
-         console.log("res.data.cart", res.data.cart);
-         console.log("res.data.productOnCart", res.data.productOnCart);
+         // console.log("res.data.cart", res.data.cart);
+         // console.log("res.data.productOnCart", res.data.productOnCart);
          if (res.status === 202) {
             toast({
                title: "We're sorry!",

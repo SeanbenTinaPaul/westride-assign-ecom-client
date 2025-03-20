@@ -112,7 +112,7 @@ function SearchForProd({ setIsFoundSearch, setWhatTextSearch }) {
    //4. req to backend
    const handleSumitSearch = async (e) => {
       e.preventDefault();
-      console.log(searchTerms);
+      // console.log(searchTerms);
       try {
          //if no search input → just display all products
          //empty str is false, empty arr is true
@@ -126,7 +126,7 @@ function SearchForProd({ setIsFoundSearch, setWhatTextSearch }) {
          }
 
          const result = await getSeachFilterProd(searchTerms);
-         console.log("Search result", result);
+         // console.log("Search result", result);
          //check if prod were found
          if (result?.data?.length === 0) {
             //not found→ display all prod instead
