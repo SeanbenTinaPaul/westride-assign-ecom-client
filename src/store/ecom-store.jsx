@@ -17,6 +17,12 @@ const ecomStore = (set, get) => ({
    products: [],
    brands: [],
    carts: [],
+   // เก็บค่า totals จาก backend สำหรับ cart (ลดการคำนวณใน frontend)
+   cartTotals: {
+      totalDiscount: 0,
+      total: 0,
+      totalNet: 0
+   },
    isSaveToCart: false,
    savedCartCount: 0, //คอขวด carts.length
    showLogoutConfirm: false, // for Show confirmation if user go logout BUT cart not empty and not saved
@@ -33,7 +39,7 @@ const ecomStore = (set, get) => ({
          savedCartCount: get().carts.length //คอขวดคือ savedCartCount , อยากได้ carts.len มาเอาผ่าน state นี้
       });
    },
-   
+
    synCartwithProducts: (productData) => {
       //productData ==={buyPrice, buyPriceNum, preferDiscount,...}
       // console.log("syncPrice And Disc", productData);
@@ -82,6 +88,16 @@ const ecomStore = (set, get) => ({
          // console.clear();
          // console.log("cart now", carts);
          // console.log("fetchUserCart", res.data);
+         // เก็บค่า totals จาก backend (ลดการคำนวณใน frontend)
+         if (res.data.success) {
+            set({
+               cartTotals: {
+                  totalDiscount: res.data.totalCartDiscount || 0,
+                  total: res.data.totalPriceNoDiscount || 0,
+                  totalNet: res.data.totalNet || 0
+               }
+            });
+         }
          if (res.data.ProductOnCart?.length > 0 || res.data.success) {
             if (carts.length === 0) {
                const editKeyProdArr = res.data.ProductOnCart.map((prod) => {
@@ -98,7 +114,8 @@ const ecomStore = (set, get) => ({
                get().updateStatusSaveToCart(true);
             } else {
                // console.log("fetch carts + carts", carts);
-               carts.forEach((cartItem) => {
+               // ใช้ for loop แทน forEach ตาม AGENTS.md
+               for (const cartItem of carts) {
                   const existIndex = res.data.ProductOnCart.findIndex(
                      (prod) => prod.productId === cartItem.id
                   );
@@ -111,9 +128,9 @@ const ecomStore = (set, get) => ({
                         preferDiscount: cartItem.preferDiscount
                      };
                   }
-                  // console.log("res.data.ProductOnCart", res.data.ProductOnCart);
-                  set({ carts: res.data.ProductOnCart });
-               });
+               }
+               // console.log("res.data.ProductOnCart", res.data.ProductOnCart);
+               set({ carts: res.data.ProductOnCart });
             }
          }
       } catch (error) {
@@ -154,7 +171,7 @@ const ecomStore = (set, get) => ({
       get().updateStatusSaveToCart(false);
       get().synCartwithProducts(productObj);
    },
-   
+
    adjustQuantity: (prodId, updateQuant) => {
       // console.log("adjustQuantity", prodId, updateQuant);
       set((state) => ({
@@ -265,7 +282,6 @@ const ecomStore = (set, get) => ({
          // console.log("getProduct response:", res.data);
          set({ products: res.data }); //เก็บ res.data►[{},{},..] ที่ส่งมาจาก backend
 
-        
          get().synCartwithProducts(); // Auto-sync carts after products update
          return res; // Return the response
       } catch (err) {
@@ -297,5 +313,3 @@ const usePersist = {
 const useEcomStore = create(persist(ecomStore, usePersist)); //useEcomStore เป็น hook
 
 export default useEcomStore; //useEcomStore(() => {return..}) to access global state 'ecomStore'
-
-

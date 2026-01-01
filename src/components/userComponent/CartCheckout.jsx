@@ -1,10 +1,11 @@
 //parent → Cart.jsx
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { Link, useNavigate } from "react-router-dom";
 import { createCartUser } from "@/api/userAuth";
 import useEcomStore from "@/store/ecom-store";
 import { formatNumber } from "@/utilities/formatNumber";
+import { getPercentDiscount, calculateCartTotals } from "@/utilities/discountHelper";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { useToast } from "@/components/hooks/use-toast";
 import { ListChecks, Trash2, Slack } from "lucide-react";
 
 function CartCheckout({ isCollapsedContext }) {
+   // ดึง cartTotals จาก store (คำนวณจาก backend)
    const {
       carts,
       fetchUserCart,
@@ -20,7 +22,8 @@ function CartCheckout({ isCollapsedContext }) {
       removeCart,
       token,
       getProduct,
-      updateStatusSaveToCart
+      updateStatusSaveToCart,
+      cartTotals
    } = useEcomStore((state) => state);
    const [totalDiscount, setTotalDiscount] = useState(0);
    const [totalNet, setTotalNet] = useState(0);
@@ -89,66 +92,26 @@ function CartCheckout({ isCollapsedContext }) {
          console.log(err);
       }
    };
-   // Safe discount amount getter
-   const getDiscountAmount = (cart) => {
-      //check if isAtive === true (not expired)
-      //isAtive === true → can use discount
-      let today = new Date();
-      let startDate = new Date(cart?.discounts?.[0]?.startDate);
-      let endDate = new Date(cart?.discounts?.[0]?.endDate);
-      if (cart?.discounts?.[0]?.isActive && today < endDate && today >= startDate) {
-         // console.log("carts?.discounts?.[0]?.amount", cart?.discounts?.[0]?.amount);
-         return cart?.discounts?.[0]?.amount;
-      }
-      return null;
-   };
-   //move howMuchDiscount out of useEffect() and carts.forEach((cart) =>{..}) to prevent infinite render
-   const howMuchDiscount = useCallback((cart) => {
-      const discountAmount = getDiscountAmount(cart);
-      const price = cart.price * cart.countCart;
 
-      if (cart?.promotion > discountAmount) {
-         return price * (cart.promotion / 100);
-      } else if (cart?.promotion < discountAmount) {
-         return price * (discountAmount / 100);
-      }
-      return 0;
-   }, []); // Empty dependency array since getDiscountAmount is stable
-
-   // Calculate discounts whenever carts update
    useEffect(() => {
-      let totalDisc = 0;
-      let total = 0;
-      let totalNet = 0;
-
-      carts.forEach((cart) => {
-         let discAmount = howMuchDiscount(cart);
-         totalDisc += discAmount;
-         total += cart.price * cart.countCart;
-         totalNet += cart.price * cart.countCart - discAmount;
-      });
-
-      setTotalDiscount(totalDisc);
-      setTotal(total);
-      setTotalNet(totalNet);
-   }, [carts, howMuchDiscount]);
-
-   //cal promotion va discount price | หาเฉพาะจำนวนที่ไม่ต้องจ่าย
-
-   //cal percent discount for badge
-   const renderPercentDiscount = (cart) => {
-      const discountAmount = getDiscountAmount(cart);
-      if (cart?.promotion && discountAmount) {
-         //  console.log("pro vs dis", cart?.promotion ,discountAmount );
-         return Math.max(cart?.promotion, discountAmount);
-      } else if (cart?.promotion) {
-         // console.log("carts.promotion", cart?.promotion);
-         return cart?.promotion;
-      } else if (discountAmount) {
-         // console.log("discountAmount", discountAmount);
-         return discountAmount;
+      // ถ้า backend ส่งค่ามาแล้ว ใช้ค่าจาก store
+      if (cartTotals.total > 0 || cartTotals.totalNet > 0) {
+         setTotalDiscount(cartTotals.totalDiscount);
+         setTotal(cartTotals.total);
+         setTotalNet(cartTotals.totalNet);
+      } else {
+         // fallback: คำนวณเองจาก carts
+         const calculated = calculateCartTotals(carts);
+         setTotalDiscount(calculated.totalDiscount);
+         setTotal(calculated.total);
+         setTotalNet(calculated.totalNet);
       }
-      return null;
+   }, [carts, cartTotals]);
+
+   //cal promotion vs discount price | หาเฉพาะจำนวนที่ไม่ต้องจ่าย
+   //cal percent discount for badge (ใช้ utility function)
+   const renderPercentDiscount = (cart) => {
+      return getPercentDiscount(cart?.promotion, cart?.discounts);
    };
 
    const handleRmCart = (prodId) => {
@@ -194,7 +157,7 @@ function CartCheckout({ isCollapsedContext }) {
                            </section>
                            {/* badge+title+desc */}
                            <section className='flex flex-col justify-between w-3/4 h-28 mx-4'>
-                              {(cart?.promotion || getDiscountAmount(cart)) && (
+                              {renderPercentDiscount(cart) && (
                                  <div>
                                     <Badge className='bg-red-500 px-1'>
                                        -{renderPercentDiscount(cart)}%

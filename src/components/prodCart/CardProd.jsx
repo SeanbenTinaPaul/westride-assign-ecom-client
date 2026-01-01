@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { formatNumber } from "@/utilities/formatNumber";
+import { getPercentDiscount, calculateDiscount } from "@/utilities/discountHelper";
 //component ui
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -92,46 +93,29 @@ function CardProd({ prodObj }) {
       return stars;
    };
 
-   // Safe discount amount getter | Pending to move to backend...
-   const getDiscountAmount = () => {
-      //check if isAtive === true (not expired)
-      //isAtive === true → can use discount
-      let today = new Date();
-      let startDate = new Date(prodObj?.discounts?.[0]?.startDate);
-      let endDate = new Date(prodObj?.discounts?.[0]?.endDate);
-      if (prodObj?.discounts?.[0]?.isActive && today < endDate && today >= startDate) {
-         return prodObj?.discounts?.[0]?.amount;
-      }
-      return null;
-   };
-
-   //create new the price after discount OR promotion in productData for further Checkout | Pending to move to backend...
+   // ใช้ buyPriceNum และ preferDiscount จาก backend (prodObj) หรือ fallback จาก utility function
    useEffect(() => {
-      const calDiscountPrice = () => {
-         const discountAmount = getDiscountAmount();
-         let buyPrice = formatNumber(prodObj?.price); //assign เผื่อไม่มี discount กับ promotion
-         let buyPriceNum = prodObj?.price;
-         let preferDiscount = null;
-
-         if (prodObj?.promotion > discountAmount) {
-            preferDiscount = prodObj.promotion;
-            buyPriceNum = prodObj.price * (1 - prodObj.promotion / 100);
-            buyPrice = formatNumber(buyPriceNum);
-         } else if (prodObj?.promotion < discountAmount) {
-            preferDiscount = discountAmount;
-            buyPriceNum = prodObj.price * (1 - prodObj.discounts[0].amount / 100);
-            buyPrice = formatNumber(buyPriceNum);
-         }
-         //this code will decide NaN or number in CartInfo.jsx + CartCheckout.jsx
+      // ถ้า backend ส่งค่ามาแล้ว ใช้ค่าจาก prodObj โดยตรง
+      //this code will decide NaN or number in CartInfo.jsx + CartCheckout.jsx
+      if (prodObj?.buyPriceNum !== undefined) {
          setProductData((prev) => ({
             ...prev,
-            buyPrice: buyPrice,
+            ...prodObj,
+            buyPrice: formatNumber(prodObj.buyPriceNum),
+            buyPriceNum: prodObj.buyPriceNum,
+            preferDiscount: prodObj.preferDiscount
+         }));
+      } else {
+         // fallback: คำนวณเองจาก utility function
+         const { buyPriceNum, preferDiscount } = calculateDiscount(prodObj);
+         setProductData((prev) => ({
+            ...prev,
+            ...prodObj,
+            buyPrice: formatNumber(buyPriceNum),
             buyPriceNum: buyPriceNum,
             preferDiscount: preferDiscount
          }));
-         // synCartwithProducts(productData);
-      };
-      calDiscountPrice();
+      }
    }, [prodObj]);
 
    useEffect(() => {
@@ -141,27 +125,14 @@ function CardProd({ prodObj }) {
       if (user && token) setFav();
    }, [prodObj, productData]);
 
-   //cal promotion va discount price
-   const renderDiscountPrice = (price) => {
-      const discountAmount = getDiscountAmount();
-      if (prodObj?.promotion > discountAmount) {
-         return formatNumber(price * (1 - prodObj.promotion / 100));
-      } else if (prodObj?.promotion < discountAmount) {
-         return formatNumber(price * (1 - prodObj.discounts[0].amount / 100));
-      }
-      return formatNumber(price);
+   //cal promotion vs discount price (ใช้ค่าจาก productData ที่มี buyPriceNum แล้ว)
+   const renderDiscountPrice = () => {
+      return formatNumber(productData.buyPriceNum);
    };
-   //cal percent discount for badge
+
+   //cal percent discount for badge (ใช้ utility function)
    const renderPercentDiscount = () => {
-      const discountAmount = getDiscountAmount();
-      if (prodObj?.promotion && discountAmount) {
-         return Math.max(prodObj.promotion, discountAmount);
-      } else if (prodObj?.promotion) {
-         return prodObj.promotion;
-      } else if (discountAmount) {
-         return discountAmount;
-      }
-      return null;
+      return getPercentDiscount(prodObj?.promotion, prodObj?.discounts);
    };
 
    return (
@@ -193,7 +164,7 @@ function CardProd({ prodObj }) {
                         className='w-full h-full object-cover bg-gradient-to-tr from-slate-100 to-slate-200'
                      />
                   </Link>
-                  {(prodObj?.promotion || getDiscountAmount()) && (
+                  {renderPercentDiscount() && (
                      <Badge className='absolute top-2 right-2 lg:top-4 lg:right-4 bg-red-500 px-1'>
                         -{renderPercentDiscount()}%
                      </Badge>
@@ -255,18 +226,16 @@ function CardProd({ prodObj }) {
                   {/* price + discount + rating */}
                   <CardContent className=' mt-auto pb-2 lg:px-4 my-0 pt-0 px-2 ml-1 absolute lg:static top-[138px]'>
                      <div className='flex lg:space-x-2 h-[44px] flex-col space-x-1 space-y-1 items-start justify-end '>
-                        {/* ราคาหลังหัก promotion */}
+                        {/* ราคาหลังหัก promotion (ใช้ค่าจาก productData) */}
                         <span className='lg:text-xl font-bold text-blue-600 text-sm'>
                            ฿
-                           {prodObj?.promotion || getDiscountAmount()
-                              ? renderDiscountPrice(prodObj?.price)
+                           {renderPercentDiscount()
+                              ? renderDiscountPrice()
                               : formatNumber(prodObj?.price)}
                         </span>
                         {/* ราคาจริง มีขีด line-through */}
                         <span className='lg:text-sm text-gray-500 line-through text-xs '>
-                           {prodObj?.promotion || getDiscountAmount()
-                              ? `฿${formatNumber(prodObj?.price)}`
-                              : ""}
+                           {renderPercentDiscount() ? `฿${formatNumber(prodObj?.price)}` : ""}
                         </span>
                      </div>
                      <div className='mt-1 mb-0 flex items-center lg:space-x-1 space-x-0 top-[138px] left-2'>

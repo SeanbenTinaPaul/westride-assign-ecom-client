@@ -1,8 +1,9 @@
 //parent → ViewProdPageUser.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import PropTypes from "prop-types";
 import { formatNumber } from "@/utilities/formatNumber";
 import { renderStar } from "@/utilities/renderStars";
+import { getPercentDiscount, calculateDiscount } from "@/utilities/discountHelper";
+
 //component ui
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/hooks/use-toast";
@@ -13,7 +14,6 @@ import useEcomStore from "@/store/ecom-store";
 import { createCartUser } from "@/api/userAuth";
 import { Link, useParams, useNavigate } from "react-router-dom";
 
-import { motion } from "motion/react";
 import { readProduct } from "@/api/ProductAuth";
 import { toggleFavoriteUser } from "@/api/userAuth";
 import { SwiperSlide } from "swiper/react";
@@ -189,38 +189,25 @@ function ViewProdUser(props) {
       }
    };
 
-   //2. safe discount amount getter
-   const getDiscountAmount = useCallback(() => {
-      const today = new Date();
-      const startDate = new Date(productData?.discounts?.[0]?.startDate);
-      const endDate = new Date(productData?.discounts?.[0]?.endDate);
-
-      if (productData?.discounts?.[0]?.isActive && today < endDate && today >= startDate) {
-         return productData?.discounts?.[0]?.amount;
-      }
-      return null;
-   }, [productData?.discounts]);
    //create new the price after discount OR promotion in productData for further Checkout
+   // ใช้ค่าจาก backend (productData.buyPriceNum) หรือ fallback จาก utility function
    const calDiscountedPrice = useCallback(() => {
-      const discountAmount = getDiscountAmount();
-      const price = productData?.price || 0;
-
-      let buyPrice = formatNumber(price);
-      let buyPriceNum = price;
-      let preferDiscount = null;
-
-      if (productData?.promotion > discountAmount) {
-         preferDiscount = productData.promotion;
-         buyPriceNum = price * (1 - productData.promotion / 100);
-      } else if (discountAmount) {
-         preferDiscount = discountAmount;
-         buyPriceNum = price * (1 - discountAmount / 100);
+      // ถ้า backend ส่งค่ามาแล้ว ใช้ค่าจาก productData โดยตรง
+      if (productData?.buyPriceNum !== undefined) {
+         return {
+            buyPrice: formatNumber(productData.buyPriceNum),
+            buyPriceNum: productData.buyPriceNum,
+            preferDiscount: productData.preferDiscount
+         };
       }
-
-      buyPrice = formatNumber(buyPriceNum);
-
-      return { buyPrice: buyPrice, buyPriceNum: buyPriceNum, preferDiscount: preferDiscount };
-   }, [productData?.price, productData?.promotion, getDiscountAmount]);
+      // fallback: คำนวณเองจาก utility function
+      const { buyPriceNum, preferDiscount } = calculateDiscount(productData);
+      return {
+         buyPrice: formatNumber(buyPriceNum),
+         buyPriceNum: buyPriceNum,
+         preferDiscount: preferDiscount
+      };
+   }, [productData]);
 
    // cleanup thumbsSwiper
    useEffect(() => {
@@ -370,27 +357,14 @@ function ViewProdUser(props) {
       );
    }
 
-   //1.cal promotion vs discount price
-   const renderDiscountPrice = (price) => {
-      const discountAmount = getDiscountAmount();
-      if (productData?.promotion > discountAmount) {
-         return price * (1 - productData.promotion / 100);
-      } else if (productData?.promotion < discountAmount) {
-         return price * (1 - productData.discounts[0].amount / 100);
-      }
-      return price;
+   //1.cal promotion vs discount price (ใช้ค่าจาก productData ที่มี buyPriceNum แล้ว)
+   const renderDiscountPrice = () => {
+      const { buyPriceNum } = calDiscountedPrice();
+      return buyPriceNum;
    };
-   //3.cal percent discount for badge
+   //3.cal percent discount for badge (ใช้ utility function)
    const renderPercentDiscount = () => {
-      const discountAmount = getDiscountAmount();
-      if (productData?.promotion && discountAmount) {
-         return Math.max(productData.promotion, discountAmount);
-      } else if (productData?.promotion) {
-         return productData.promotion;
-      } else if (discountAmount) {
-         return discountAmount;
-      }
-      return null;
+      return getPercentDiscount(productData?.promotion, productData?.discounts);
    };
 
    return (
@@ -416,7 +390,7 @@ function ViewProdUser(props) {
                {/* top-left : title discount star brand sold fav  */}
                <header className='flex flex-col h-52 w-full p-4 gap-2 '>
                   <p className='mb-4 font-medium text-2xl drop-shadow '>{productData.title}</p>
-                  {(productData?.promotion || getDiscountAmount()) && (
+                  {renderPercentDiscount() && (
                      <Badge className='ml-4 w-12 bg-red-500 py-1 px-2'>
                         -{renderPercentDiscount()}%
                      </Badge>
@@ -485,18 +459,16 @@ function ViewProdUser(props) {
                   {/* price + discount  */}
                   <section className='p-4 '>
                      <div className='flex space-x-4 '>
-                        {/* ราคาหลังหัก promotion */}
+                        {/* ราคาหลังหัก promotion (ใช้ค่าจาก productData) */}
                         <span className='text-3xl font-bold text-blue-600 drop-shadow'>
                            ฿
-                           {productData?.promotion || getDiscountAmount()
-                              ? formatNumber(renderDiscountPrice(productData?.price))
+                           {renderPercentDiscount()
+                              ? formatNumber(renderDiscountPrice())
                               : formatNumber(productData?.price)}
                         </span>
                         {/* ราคาจริง มีขีด line-through */}
                         <span className='text-xl text-gray-500 line-through  '>
-                           {productData?.promotion || getDiscountAmount()
-                              ? `฿${formatNumber(productData?.price)}`
-                              : ""}
+                           {renderPercentDiscount() ? `฿${formatNumber(productData?.price)}` : ""}
                         </span>
                      </div>
                   </section>
@@ -530,8 +502,8 @@ function ViewProdUser(props) {
                         <div className='w-full flex flex-col items-center gap-4 py-4 rounded-2xl Input-3Dshadow'>
                            <section className='w-full text-center font-normal text-2xl text-fuchsia-900 drop-shadow'>
                               ฿
-                              {productData?.promotion || getDiscountAmount()
-                                 ? formatNumber(renderDiscountPrice(productData?.price) * quantity)
+                              {renderPercentDiscount()
+                                 ? formatNumber(renderDiscountPrice() * quantity)
                                  : formatNumber(productData?.price * quantity)}
                               {/* ฿{formatNumber(cart.buyPriceNum * quantity)} */}
                            </section>
@@ -597,6 +569,5 @@ function ViewProdUser(props) {
    const [ratingInfo, setRatingInfo] = useState({});
    const [rateAndComment, setRateAndComment] = useState([]);
    */
-ViewProdUser.propTypes = {};
 
 export default ViewProdUser;

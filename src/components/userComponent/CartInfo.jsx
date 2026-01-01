@@ -9,16 +9,11 @@ import { formatNumber } from "@/utilities/formatNumber";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/hooks/use-toast";
 import { createCartUser } from "@/api/userAuth";
+import { getPercentDiscount } from "@/utilities/discountHelper";
 
 function CartInfo(props) {
-   const {
-      token,
-      carts,
-      adjustQuantity,
-      removeCart,
-      updateStatusSaveToCart,
-      getProduct
-   } = useEcomStore((state) => state);
+   const { token, carts, adjustQuantity, removeCart, updateStatusSaveToCart, getProduct } =
+      useEcomStore((state) => state);
    //carts === [{ categoryId:, buyPriceNum:,countCart:,discounts:,promotion:, },{},..]
    const { toast } = useToast();
 
@@ -28,39 +23,18 @@ function CartInfo(props) {
       getProduct(1000, 1);
       // console.log("carts after click add", carts);
    };
-   // Safe discount amount getter
-   const getDiscountAmount = useCallback((cart) => {
-      //check if isAtive === true (not expired)
-      //isAtive === true → can use discount
-      // console.log('check cart sample',cart)
-      let today = new Date();
-      let startDate = new Date(cart?.discounts?.[0]?.startDate);
-      let endDate = new Date(cart?.discounts?.[0]?.endDate);
-      // console.log(today, '' ,startDate,cart?.discounts?.[0]?.startDate  );
-      if (cart?.discounts?.[0]?.isActive && today < endDate && today >= startDate) {
-         // console.log("carts?.discounts?.[0]?.amount", cart?.discounts?.[0]?.amount);
-         return cart?.discounts?.[0]?.amount;
-      }
-      return null;
-   }, []);
-   //cal percent discount for badge
+
+   // คำนวณ percent discount สำหรับ badge (ใช้ utility function)
    const renderPercentDiscount = useCallback((cart) => {
-      const discountAmount = getDiscountAmount(cart);
-      if (cart?.promotion && discountAmount) {
-         //  console.log("pro vs dis", cart?.promotion ,discountAmount );
-         return Math.max(cart?.promotion, discountAmount);
-      } else if (cart?.promotion) {
-         // console.log("carts.promotion", cart?.promotion);
-         return cart?.promotion;
-      } else if (discountAmount) {
-         // console.log("discountAmount", discountAmount);
-         return discountAmount;
-      }
-      return null;
+      return getPercentDiscount(cart?.promotion, cart?.discounts);
    }, []);
 
+   // คำนวณ total price จาก carts (ใช้ buyPriceNum ที่คำนวณจาก backend หรือ fallback)
    const toTalPrice = useCallback(() => {
-      let total = carts.reduce((acc, curr) => acc + curr.buyPriceNum * curr.countCart, 0);
+      let total = 0;
+      for (const cart of carts) {
+         total += cart.buyPriceNum * cart.countCart;
+      }
       return total;
    }, [carts]);
 
@@ -130,7 +104,7 @@ function CartInfo(props) {
                         </section>
                         {/* badge+title+desc */}
                         <section className='block w-3/4'>
-                           {(cart?.promotion || getDiscountAmount(cart)) && (
+                           {renderPercentDiscount(cart) && (
                               <Badge className='bg-red-500 px-1'>
                                  -{renderPercentDiscount(cart)}%
                               </Badge>
