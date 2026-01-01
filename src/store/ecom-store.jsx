@@ -89,7 +89,8 @@ const ecomStore = (set, get) => ({
          // console.log("cart now", carts);
          // console.log("fetchUserCart", res.data);
          // เก็บค่า totals จาก backend (ลดการคำนวณใน frontend)
-         if (res.data.success) {
+         // แต่ถ้า backend ไม่มี ProductOnCart (เช่น "No cart yet") ไม่ต้อง set totals
+         if (res.data.success && res.data.ProductOnCart) {
             set({
                cartTotals: {
                   totalDiscount: res.data.totalCartDiscount || 0,
@@ -98,7 +99,8 @@ const ecomStore = (set, get) => ({
                }
             });
          }
-         if (res.data.ProductOnCart?.length > 0 || res.data.success) {
+         // เฉพาะเมื่อ backend มี ProductOnCart เท่านั้น จึงจะ update local state
+         if (res.data.ProductOnCart?.length > 0) {
             if (carts.length === 0) {
                const editKeyProdArr = res.data.ProductOnCart.map((prod) => {
                   return {
