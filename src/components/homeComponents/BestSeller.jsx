@@ -17,7 +17,7 @@ function BestSeller(props) {
          }
       };
       fetchProducts();
-   }, [setProdArr]);
+   }, []);
 
    const colorTag = (i) => {
       switch (i) {

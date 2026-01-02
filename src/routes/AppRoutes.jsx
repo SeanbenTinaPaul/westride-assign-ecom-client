@@ -78,7 +78,7 @@ const router = createBrowserRouter([
          { path: "cart", element: <CartUser /> },
          { path: "payment", element: <Payment /> },
          { path: "history", element: <HistoryUser /> },
-         { path: "favorite", element: <FavoriteUser /> }, //pending...
+         { path: "favorite", element: <FavoriteUser /> },
          { path: "editprofile", element: <EditProfileUser /> },
          { path: "view-product/:id", element: <ViewProdPageUser /> }
       ]

@@ -1,22 +1,17 @@
 //parent→ LayoutUser.jsx
 import React, { useState } from "react";
-import PropTypes from "prop-types";
 import { NavLink, useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
    Home,
    Store,
    ShoppingCart,
-   UserPlus,
-   LogIn,
    LogOut,
    Wallet,
    History,
    UserPen,
-   User,
    Slack,
    ChevronDown,
-   ChevronUp,
    Heart 
 } from "lucide-react";
 import useEcomStore from "@/store/ecom-store";
@@ -246,7 +241,7 @@ function SidebarUser({ isCollapsed }) {
                               isCollapsed ? "hidden" : "block"
                            }`}
                         >
-                           {user.name ? user.name : "My profile"}
+                           {user?.name ? user.name : "My profile"}
                         </span>
                      </div>
                      {!isCollapsed && (
@@ -351,6 +346,5 @@ function SidebarUser({ isCollapsed }) {
    );
 }
 
-SidebarUser.propTypes = {};
 
 export default SidebarUser;

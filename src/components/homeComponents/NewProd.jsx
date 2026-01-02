@@ -19,7 +19,7 @@ function NewProd(props) {
          }
       };
       fetchProducts();
-   }, [setProdArr]);
+   }, []);
    return (
       <div className='w-full mt-6 ml-4 py-6 px-4 rounded-xl shadow-md bg-gradient-to-r from-card to-slate-100'>
          <p className='mb-10 mt-4 text-xl font-medium text-slate-700 text-center drop-shadow'>
