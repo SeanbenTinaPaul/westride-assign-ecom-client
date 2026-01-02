@@ -27,3 +27,5 @@ dist-ssr
 
 # temporary files
 client/src/utilities/tempCode.js
+
+AGENTS.md
