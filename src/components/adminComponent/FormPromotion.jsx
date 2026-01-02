@@ -295,7 +295,19 @@ function FormPromotion() {
          },
          cell: ({ row }) => {
             const discounts = row.original.discounts || [];
-            return discounts.length > 0 ? discounts.map((d) => `-${d.amount}%`) : "-";
+            if (discounts.length === 0) return "-";
+            
+            // Find active discount first, otherwise show the latest one
+            const now = new Date();
+            const activeDiscount = discounts.find(d => {
+               const startDate = new Date(d.startDate);
+               const endDate = new Date(d.endDate);
+               return d.isActive && now >= startDate && now < endDate;
+            });
+            
+            // If there's an active discount, show it; otherwise show the latest (last in array)
+            const discountToShow = activeDiscount || discounts[discounts.length - 1];
+            return discountToShow ? `-${discountToShow.amount}%` : "-";
          }
       },
       {
@@ -336,27 +348,33 @@ function FormPromotion() {
             return dateA.getTime() - dateB.getTime();
          },
          //display table content
-         cell: ({ row }) => {
-            const discounts = row.original.discounts || [];
-            return discounts.length > 0
-               ? discounts
-                    .map((d) => {
-                       // แปลง string เป็น Date object
-                       const date = new Date(d.startDate);
-                       return date.toLocaleString("en-uk", {
-                          timeZone: "Asia/Bangkok",
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true
-                       });
-                    })
-                    .join(", ") // เพิ่ม join เพื่อแสดงผลเป็น string เดียว
-               : "-";
-         }
-      },
+          cell: ({ row }) => {
+             const discounts = row.original.discounts || [];
+             if (discounts.length === 0) return "-";
+             
+             // Find active discount first, otherwise show the latest one
+             const now = new Date();
+             const activeDiscount = discounts.find(d => {
+                const startDate = new Date(d.startDate);
+                const endDate = new Date(d.endDate);
+                return d.isActive && now >= startDate && now < endDate;
+             });
+             
+             const discountToShow = activeDiscount || discounts[discounts.length - 1];
+             if (!discountToShow) return "-";
+             
+             const date = new Date(discountToShow.startDate);
+             return date.toLocaleString("en-uk", {
+                timeZone: "Asia/Bangkok",
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+             });
+          }
+       },
       {
          accessorKey: "endDate",
          header: ({ column }) => (
@@ -395,26 +413,32 @@ function FormPromotion() {
          },
 
          cell: ({ row }) => {
-            const discounts = row.original.discounts || [];
-            return discounts.length > 0
-               ? discounts
-                    .map((d) => {
-                       // แปลง string เป็น Date object
-                       const date = new Date(d.endDate);
-                       return date.toLocaleString("en-uk", {
-                          timeZone: "Asia/Bangkok",
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true
-                       });
-                    })
-                    .join(", ") // เพิ่ม join เพื่อแสดงผลเป็น string เดียว
-               : "-";
-         }
-      },
+             const discounts = row.original.discounts || [];
+             if (discounts.length === 0) return "-";
+             
+             // Find active discount first, otherwise show the latest one
+             const now = new Date();
+             const activeDiscount = discounts.find(d => {
+                const startDate = new Date(d.startDate);
+                const endDate = new Date(d.endDate);
+                return d.isActive && now >= startDate && now < endDate;
+             });
+             
+             const discountToShow = activeDiscount || discounts[discounts.length - 1];
+             if (!discountToShow) return "-";
+             
+             const date = new Date(discountToShow.endDate);
+             return date.toLocaleString("en-uk", {
+                timeZone: "Asia/Bangkok",
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+             });
+          }
+       },
       {
          accessorKey: "isActive",
          header: ({ column }) => (
@@ -553,7 +577,12 @@ function FormPromotion() {
             setSelectedProducts([]);
             setDiscountAmount("");
             setDescription("");
-            getProduct(1000, 0);
+            // Wait for products to be fetched before clearing table selection
+            await getProduct(1000, 0);
+            // Clear table selection after data refresh
+            if (tableRef.current) {
+               tableRef.current.toggleAllRowsSelected(false);
+            }
          }
       } catch (error) {
          console.error(error);

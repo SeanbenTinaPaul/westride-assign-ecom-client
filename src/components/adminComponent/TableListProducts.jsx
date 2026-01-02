@@ -6,48 +6,27 @@ import { Table } from "flowbite-react";
 
 //icon
 import { Pencil, Trash2 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import ImgProdInTableList from "./ImgProdInTableList";
 
-import useEcomStore from "../../store/ecom-store";
 import { formatNumber } from "@/utilities/formatNumber";
 
 //props.products=[{},{},..] → data from DB with cloudinary URL
-function TableListProducts({ products, handleDel, isRerender }) {
-   const { getProduct, token } = useEcomStore((state) => state);
-   //initialize the sort col and order
+function TableListProducts({ products, handleDel }) {
+   //initialize the sort col and order - sync with props
    const [tableData, setTableData] = useState(products);
 
    //for flowbite table
    const [sortCol, setSortCol] = useState("id");
    const [sortOrder, setSortOrder] = useState("asc");
 
-   const location = useLocation(); //to listen to location change
-
    // console.log("prod in table", products); //products===[{images:[{url:..}],...}, {}]
    // console.log('data',data)
 
-   /*
-   if redirected to this page → trigger useEffect to fetch data and display in table
-   - alternative to refresh whole page by window.location.reload()
-   - refresh only TableListProducts.jsx
-   */
+   // Sync tableData with props.products when products change (from parent's getProduct call)
    useEffect(() => {
-      const fetchProduct = async () => {
-         try {
-            const res = await getProduct(1000, 0);
-            // console.log("res from TableListProducts->", res.data);
-            if (res && res.data) {
-               setTableData(res.data);
-            } else {
-               console.error("Unexpected response structure:", res);
-            }
-         } catch (err) {
-            console.log(err);
-         }
-      };
-      fetchProduct();
-   }, [getProduct, location, isRerender]);
+      setTableData(products);
+   }, [products]);
 
    //function to sort table data
    const sortData = (col) => {
@@ -373,8 +352,7 @@ function TableListProducts({ products, handleDel, isRerender }) {
 
 TableListProducts.propTypes = {
    products: PropTypes.array,
-   handleDel: PropTypes.func,
-   isRerender: PropTypes.bool
+   handleDel: PropTypes.func
 };
 
 export default TableListProducts;

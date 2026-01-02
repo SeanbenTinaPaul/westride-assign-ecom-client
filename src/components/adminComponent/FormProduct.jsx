@@ -1,5 +1,6 @@
 //parent → ProductAdmin.jsx
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 //Global state
 import useEcomStore from "../../store/ecom-store";
 //API
@@ -62,7 +63,8 @@ function FormProduct() {
    );
    const [inputForm, setInputForm] = useState(inputProd);
    const [loading, setLoading] = useState(false); //for Btn loading animation
-   const [isRerender, setIsRerender] = useState(false); //for TableListProducts.jsx re-render
+   const location = useLocation(); //to re-fetch when navigating back from Edit page
+
    // const fileInputRef = useRef(null);
    //// ShadCN toast section ////
    const { toast } = useToast();
@@ -89,9 +91,10 @@ function FormProduct() {
       getBrand();
    }, [getCategory, getBrand]);
 
+   // Re-fetch products when component mounts or when navigating back from Edit page
    useEffect(() => {
       getProduct(1000, 0);
-   }, [getProduct]);
+   }, [getProduct, location]);
 
    //when filling each key in input box
    const handleOnchange = (e) => {
@@ -191,7 +194,7 @@ function FormProduct() {
          }));
 
          setLoading(false);
-         setIsRerender(!isRerender); //rerender TableListProducts if click 'Add Product'
+
       } catch (err) {
          console.log(err);
          toast({
@@ -223,7 +226,7 @@ function FormProduct() {
          setProductToRemove(null);
          // toast.success(`Delete Product: ${res.data.data.title} Success.`);
          //rerender TableListProducts if click 'Delete Product' ► click <Trash2/> in TableListProducts.jsx
-         setIsRerender(!isRerender);
+
          /****** */
          // closeToast();
       } catch (err) {
@@ -469,7 +472,6 @@ function FormProduct() {
                <TableListProducts
                   products={products}
                   handleDel={handleDel}
-                  isRerender={isRerender}
                />
             </div>
          </div>
