@@ -75,7 +75,8 @@ function FormEditProd() {
             const res = await readProduct(id);
             // console.log("res edit prod->", res.data);
             // res.data = { data: res.data.data };//remove 'success: true' key from {}
-            setInputForm(res.data.data); //ทำให้เติม value ในช่อง form by default เมื่อเข้ามาในหน้านี้
+            setInputForm(res.data.data); 
+            //ทำให้เติม value ในช่อง form by default เมื่อเข้ามาในหน้านี้
          } catch (err) {
             console.log(err);
             toast({

@@ -25,6 +25,11 @@ export const readProduct = async (id) => {
    return await axios.get(`${apiUrl}/api/product/${id}`);
 };
 
+//for CarouselBanner.jsx → lightweight images only
+export const readProductImages = async (id) => {
+   return await axios.get(`${apiUrl}/api/product/${id}/images`);
+};
+
 //backend res.json()
 export const updateProduct = async (token, id, form) => {
    return await axios.patch(`${apiUrl}/api/product/${id}`, form, {

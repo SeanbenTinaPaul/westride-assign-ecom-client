@@ -12,7 +12,7 @@ import 'swiper/css/thumbs';
 // import required modules
 import { Autoplay, Pagination, Navigation,FreeMode,Thumbs } from "swiper/modules";
 
-import { readProduct } from "@/api/ProductAuth";
+import { readProductImages } from "@/api/ProductAuth";
 
 function CarouselBanner(props) {
    const [imagArr, setImagArr] = useState([]);
@@ -21,16 +21,17 @@ function CarouselBanner(props) {
    useEffect(() => {
       const fetchImg = async () => {
          try {
-            //productId 46 ► Banner
-            const res = await readProduct(46);
-            // console.log(res.data.data.images);
-            setImagArr(res.data.data.images);
+            //productId 46 ► Banner (using lightweight images-only API)
+            const res = await readProductImages(46);
+            // console.log(res.data.data);
+            setImagArr(res.data.data);
          } catch (err) {
             console.log(err);
          }
       };
       fetchImg();
    }, []);
+
 
    // dup slide if less
    const slides = imagArr.length < 5 ? [...imagArr, ...imagArr] : imagArr;
