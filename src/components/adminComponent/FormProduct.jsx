@@ -58,7 +58,7 @@ function FormProduct() {
    // const token = useEcomStore((state)=> state.token)
    // const getCategory = useEcomStore((state)=> state.getCategory)
    // const categories = useEcomStore((state)=> state.categories)
-   const { token, getCategory, categories, getProduct, products, brands, getBrand } = useEcomStore(
+   const { token, getCategory, categories, getProductAdmin, products, brands, getBrand } = useEcomStore(
       (state) => state
    );
    const [inputForm, setInputForm] = useState(inputProd);
@@ -93,8 +93,8 @@ function FormProduct() {
 
    // Re-fetch products when component mounts or when navigating back from Edit page
    useEffect(() => {
-      getProduct(1000, 0);
-   }, [getProduct, location]);
+      getProductAdmin(1000);
+   }, [getProductAdmin, location]);
 
    //when filling each key in input box
    const handleOnchange = (e) => {
@@ -181,7 +181,7 @@ function FormProduct() {
          });
          // toast.success(`Add Product: ${res.data.title} Success.`);
          //refresh the list after click 'Add Product'
-         getProduct(1000, 0);
+         getProductAdmin(1000);
          setInputForm((prev) => ({
             ...prev,
             title: "",
@@ -221,7 +221,7 @@ function FormProduct() {
             title: "Product Deleted Successfully",
             description: `Product: ${res.data.data.title}`
          });
-         getProduct(1000, 0);
+         getProductAdmin(1000);
          setShowDialog(false);
          setProductToRemove(null);
          // toast.success(`Delete Product: ${res.data.data.title} Success.`);

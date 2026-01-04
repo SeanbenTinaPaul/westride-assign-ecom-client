@@ -3,7 +3,7 @@ import axios from "axios";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware"; //ใช้เก็บข้อมูลที่ user กรอกลง inout ไว้ใน localStorage
 import { listCategory } from "../api/CategoryAuth.jsx";
-import { listProduct, seachFilterProd } from "../api/ProductAuth.jsx";
+import { listProduct, listProductAdmin, seachFilterProd } from "../api/ProductAuth.jsx";
 // import _, { update } from "lodash"; // for making unique el array
 import { binarySearchProdId } from "@/utilities/binarySearch.js";
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -277,8 +277,8 @@ const ecomStore = (set, get) => ({
          return undefined;
       }
    },
-   //product in table
-   getProduct: async (count = 100, leastStock) => {
+   //product in table - for Guest/User
+   getProduct: async (count = 100, leastStock = 1) => {
       try {
          const res = await listProduct(count, leastStock);
          // console.log("getProduct response:", res.data);
@@ -289,6 +289,18 @@ const ecomStore = (set, get) => ({
       } catch (err) {
          console.log(err);
          return undefined; // Return undefined in case of error
+      }
+   },
+
+   //product for Admin pages (FormPromotion, FormProduct, TableListProducts)
+   getProductAdmin: async (count = 1000) => {
+      try {
+         const res = await listProductAdmin(count);
+         set({ products: res.data });
+         return res;
+      } catch (err) {
+         console.log(err);
+         return undefined;
       }
    },
 

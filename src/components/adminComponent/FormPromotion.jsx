@@ -22,7 +22,7 @@ import useEcomStore from "@/store/ecom-store";
 import { bulkDiscount } from "@/api/ProductAuth";
 
 function FormPromotion() {
-   const { getProduct, products, token } = useEcomStore(state=>state);
+   const { getProductAdmin, products, token } = useEcomStore(state=>state);
    const { toast } = useToast();
    const tableRef = useRef(null); //for clear checkbox in table
    // const [products, setProducts] = useState([]); //for fetching all products from DB
@@ -40,7 +40,7 @@ function FormPromotion() {
          try {
             // const res = await getProduct(100);
             // setProducts(res.data);
-            getProduct(1000, 0);
+            getProductAdmin(1000);
          } catch (error) {
             console.error(error);
             toast({
@@ -51,7 +51,7 @@ function FormPromotion() {
          }
       };
       fetchProducts();
-   }, []);
+   }, [getProductAdmin]);
 
    //clear checkbox symbol in table when clicked 'Reset' button
    const handleReset = () => {
@@ -578,7 +578,7 @@ function FormPromotion() {
             setDiscountAmount("");
             setDescription("");
             // Wait for products to be fetched before clearing table selection
-            await getProduct(1000, 0);
+            await getProductAdmin(1000);
             // Clear table selection after data refresh
             if (tableRef.current) {
                tableRef.current.toggleAllRowsSelected(false);

@@ -15,9 +15,15 @@ export const createProduct = async (token, form) => {
 
 //backend res.send()
 //count = 20 → LIMIT = 20
-export const listProduct = async (count = 50, leastStock = 0) => {
+export const listProduct = async (count = 50, leastStock = 1) => {
    return await axios.get(`${apiUrl}/api/products/${count}?leastStock=${leastStock}`);
 };
+
+//for Admin pages (FormPromotion, FormProduct, TableListProducts)
+export const listProductAdmin = async (count = 1000) => {
+   return await axios.get(`${apiUrl}/api/products-admin/${count}`);
+};
+
 
 //for EditProd.jsx → FormEditProd.jsx
 //backend res.json()
