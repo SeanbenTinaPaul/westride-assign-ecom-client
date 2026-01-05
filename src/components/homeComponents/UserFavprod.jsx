@@ -8,7 +8,7 @@ import useEcomStore from "@/store/ecom-store";
 import { Link } from "react-router-dom";
 
 function UserFavprod(props) {
-   const { user, token } = useEcomStore((state) => state);
+   const { user, token, sseUpdateTrigger } = useEcomStore((state) => state);
    const [prodArr, setProdArr] = useState([]);
 
    useEffect(() => {
@@ -22,7 +22,7 @@ function UserFavprod(props) {
          }
       };
       fetchProducts();
-   }, [setProdArr]);
+   }, [token, sseUpdateTrigger]);
    return (
       <>
          {user && prodArr?.length > 0 ? (

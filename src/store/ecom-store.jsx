@@ -27,6 +27,7 @@ const ecomStore = (set, get) => ({
    savedCartCount: 0, //คอขวด carts.length
    showLogoutConfirm: false, // for Show confirmation if user go logout BUT cart not empty and not saved
    isLoggingOut: false, //to check logout attempt
+   sseUpdateTrigger: 0, // SSE: increment เมื่อมี updates → components ที่ watch จะ re-fetch
    //to control logout confirmation dialog
    resetCartsAfterPurchas: (prodIdPaidArr) => {
       //keep carts[i].id that not in prodIdPaidArr
@@ -314,6 +315,106 @@ const ecomStore = (set, get) => ({
          console.log(err);
          return { data: [] }; // Return empty array if error
       }
+   },
+
+   // SSE: update products และ carts จาก real-time events
+   // ใช้ calculateDiscount เพื่อคำนวณ buyPriceNum ใหม่
+   updateProductFromSSE: (sseData) => {
+      const { type, productId, productIds, data, promotion, discount } = sseData;
+      
+      // Helper: recalculate buyPriceNum for a product
+      const recalcDiscount = (prod) => {
+         const discounts = prod.discounts || [];
+         let buyPriceNum = prod.price;
+         let preferDiscount = null;
+         
+         // Check active discount
+         const today = new Date();
+         let discountAmount = null;
+         if (discounts.length > 0) {
+            const d = discounts[0];
+            const startDate = new Date(d.startDate);
+            const endDate = new Date(d.endDate);
+            if (d.isActive && today >= startDate && today < endDate) {
+               discountAmount = d.amount;
+            }
+         }
+         
+         // Compare promotion vs discount
+         if (prod.promotion > discountAmount) {
+            preferDiscount = prod.promotion;
+            buyPriceNum = prod.price * (1 - prod.promotion / 100);
+         } else if (discountAmount) {
+            preferDiscount = discountAmount;
+            buyPriceNum = prod.price * (1 - discountAmount / 100);
+         }
+         
+         return { buyPriceNum, preferDiscount };
+      };
+      
+      // Update single product
+      if (type === "UPDATE_PRODUCT" && productId && data) {
+         set((state) => ({
+            products: state.products.map((prod) => {
+               if (prod.id === productId) {
+                  const updated = { ...prod, ...data };
+                  const { buyPriceNum, preferDiscount } = recalcDiscount(updated);
+                  return { ...updated, buyPriceNum, preferDiscount };
+               }
+               return prod;
+            }),
+            carts: state.carts.map((cart) => {
+               if (cart.id === productId) {
+                  const updated = { 
+                     ...cart, 
+                     quantity: data.quantity ?? cart.quantity,
+                     price: data.price ?? cart.price,
+                     promotion: data.promotion ?? cart.promotion
+                  };
+                  const { buyPriceNum, preferDiscount } = recalcDiscount(updated);
+                  return { ...updated, buyPriceNum, preferDiscount };
+               }
+               return cart;
+            })
+         }));
+      }
+      
+      // Bulk update (from bulkDiscount)
+      if (type === "BULK_UPDATE" && productIds) {
+         set((state) => ({
+            products: state.products.map((prod) => {
+               if (productIds.includes(prod.id)) {
+                  let updated = { ...prod };
+                  if (promotion !== undefined) {
+                     updated.promotion = promotion;
+                  }
+                  if (discount) {
+                     updated.discounts = [discount];
+                  }
+                  const { buyPriceNum, preferDiscount } = recalcDiscount(updated);
+                  return { ...updated, buyPriceNum, preferDiscount };
+               }
+               return prod;
+            }),
+            carts: state.carts.map((cart) => {
+               if (productIds.includes(cart.id)) {
+                  let updated = { ...cart };
+                  if (promotion !== undefined) {
+                     updated.promotion = promotion;
+                  }
+                  if (discount) {
+                     updated.discounts = [discount];
+                  }
+                  const { buyPriceNum, preferDiscount } = recalcDiscount(updated);
+                  return { ...updated, buyPriceNum, preferDiscount };
+               }
+               return cart;
+            })
+         }));
+      }
+      
+      // Trigger re-fetch สำหรับ components ที่ไม่ได้ใช้ products จาก store (BestSeller, NewProd, etc.)
+      set((state) => ({ sseUpdateTrigger: state.sseUpdateTrigger + 1 }));
    }
 });
 

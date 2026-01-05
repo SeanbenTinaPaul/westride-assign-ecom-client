@@ -12,17 +12,11 @@ import { createCartUser } from "@/api/userAuth";
 import { getPercentDiscount } from "@/utilities/discountHelper";
 
 function CartInfo(props) {
-   const { token, carts, adjustQuantity, removeCart, updateStatusSaveToCart, getProduct } =
+   const { token, carts, adjustQuantity, removeCart, updateStatusSaveToCart } =
       useEcomStore((state) => state);
-   //carts === [{ categoryId:, buyPriceNum:,countCart:,discounts:,promotion:, },{},..]
+   //carts === [{ categoryId:, buyPriceNum:,countCart:,discounts:,promotion:, },{},..]  
    const { toast } = useToast();
-
-   // console.log("carts in CartInfo", carts);
-   // Sync with products when carts or products change
-   const handleClickAddDelamount = () => {
-      getProduct(1000, 1);
-      // console.log("carts after click add", carts);
-   };
+   // SSE handles real-time updates - no need for getProduct on each click
 
    // คำนวณ percent discount สำหรับ badge (ใช้ utility function)
    const renderPercentDiscount = useCallback((cart) => {
@@ -132,7 +126,6 @@ function CartInfo(props) {
                         <button
                            onClick={() => {
                               adjustQuantity(cart.id, cart.countCart - 1);
-                              handleClickAddDelamount();
                            }}
                            className='px-1 w-6 rounded-md Btn-3Dshadow'
                         >
@@ -143,7 +136,6 @@ function CartInfo(props) {
                            disabled={cart.countCart >= cart.quantity}
                            onClick={() => {
                               adjustQuantity(cart.id, cart.countCart + 1);
-                              handleClickAddDelamount();
                            }}
                            className='px-1 w-6 rounded-md Btn-3Dshadow'
                         >

@@ -21,7 +21,6 @@ function CartCheckout({ isCollapsedContext }) {
       adjustQuantity,
       removeCart,
       token,
-      getProduct,
       updateStatusSaveToCart,
       cartTotals
    } = useEcomStore((state) => state);
@@ -31,22 +30,11 @@ function CartCheckout({ isCollapsedContext }) {
    const navigate = useNavigate();
    const { toast } = useToast();
    const [scrolledToBottom, setScrolledToBottom] = useState(false); //true→fully show | false→hide some part
-   // const sidebarWidth = isCollapsedContext ? "6rem" : "16rem"; //for moving last <main>
 
-   // console.log(user);
-   // console.log("carts in ListCheckout", { carts });
-
-   // Sync with products when carts or products change
+   // Initial fetch only - SSE handles real-time updates
    useEffect(() => {
-      getProduct(1000, 1);
       fetchUserCart();
    }, []);
-
-   //fetch products every '+' and '-' clicked
-   const handleClickAddDelamount = () => {
-      getProduct(1000, 1);
-      // console.log("carts after click add", carts);
-   };
    //check if scrolled to bottom
    useEffect(() => {
       const handleScroll = () => {
@@ -228,7 +216,6 @@ function CartCheckout({ isCollapsedContext }) {
                               <button
                                  onClick={() => {
                                     adjustQuantity(cart.id, cart.countCart - 1);
-                                    handleClickAddDelamount();
                                  }}
                                  className='px-3 w-8 h-8 rounded-xl Btn-3Dshadow'
                               >
@@ -239,7 +226,6 @@ function CartCheckout({ isCollapsedContext }) {
                                  disabled={cart.countCart >= cart.quantity}
                                  onClick={() => {
                                     adjustQuantity(cart.id, cart.countCart + 1);
-                                    handleClickAddDelamount();
                                  }}
                                  className='px-3 w-8 h-8 rounded-xl Btn-3Dshadow'
                               >

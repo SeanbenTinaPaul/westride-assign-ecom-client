@@ -22,8 +22,6 @@ let seachBody = {
 
 function SearchForProd({ setIsFoundSearch, setWhatTextSearch }) {
    const {
-      token,
-      products,
       getProduct,
       getSeachFilterProd,
       getCategory,
@@ -131,7 +129,7 @@ function SearchForProd({ setIsFoundSearch, setWhatTextSearch }) {
          if (result?.data?.length === 0) {
             //not found→ display all prod instead
             setIsFoundSearch(false);
-            getProduct(100, 1);
+            // getProduct(100, 1);
             setWhatTextSearch(searchTerms.query);
          } else {
             //found

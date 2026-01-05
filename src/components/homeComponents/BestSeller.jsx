@@ -2,9 +2,12 @@ import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { displayProdBy } from "@/api/ProductAuth";
 import CardProd from "../prodCart/CardProd";
+import useEcomStore from "@/store/ecom-store";
 
 function BestSeller(props) {
    const [prodArr, setProdArr] = useState([]);
+   // SSE: re-fetch when products update
+   const sseUpdateTrigger = useEcomStore((state) => state.sseUpdateTrigger);
 
    useEffect(() => {
       const fetchProducts = async () => {
@@ -17,7 +20,7 @@ function BestSeller(props) {
          }
       };
       fetchProducts();
-   }, []);
+   }, [sseUpdateTrigger]);
 
    const colorTag = (i) => {
       switch (i) {
