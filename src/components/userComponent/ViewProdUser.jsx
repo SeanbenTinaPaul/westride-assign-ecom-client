@@ -43,7 +43,8 @@ function ViewProdUser(props) {
       addToCart,
       carts,
       adjustQuantity,
-      updateStatusSaveToCart
+      updateStatusSaveToCart,
+      sseUpdateTrigger  // SSE: re-fetch when products update
    } = useEcomStore((state) => state);
    const { id } = useParams();
    const navigate = useNavigate();
@@ -270,7 +271,7 @@ function ViewProdUser(props) {
       };
 
       fetchData();
-   }, []);
+   }, [id, sseUpdateTrigger]);  // SSE: re-fetch when sseUpdateTrigger changes
    // Sync with cart data
    useEffect(() => {
       if (!productData?.id) return;
