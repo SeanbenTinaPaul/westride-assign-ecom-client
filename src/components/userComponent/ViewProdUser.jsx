@@ -34,7 +34,7 @@ const inputProd = {
    discounts: []
 };
 
-function ViewProdUser(props) {
+function ViewProdUser() {
    const {
       user,
       token,
