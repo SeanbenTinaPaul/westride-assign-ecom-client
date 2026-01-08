@@ -78,11 +78,11 @@ function TableListProducts({ products, handleDel }) {
                <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400' />
                <input
                   type='text'
-                  placeholder='ค้นหาชื่อสินค้า... (กด Enter เพื่อค้นหา)'
+                  placeholder='Search for product title... (Press Enter to search)'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={handleSearch}
-                  className='w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400'
+                  className='w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-fuchsia-500 focus:border-fuchsia-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400'
                />
                {searchTerm && (
                   <button
@@ -100,7 +100,7 @@ function TableListProducts({ products, handleDel }) {
             </div>
          </div>
 
-         <div className='relative sm:rounded-lg rounded-xl border bg-card text-card-foreground shadow-md '>
+         <div className='relative sm:rounded-lg rounded-xl border bg-card text-card-foreground shadow-md max-h-[70vh] overflow-y-auto'>
             <Table>
                <Table.Head className="capitalize text-sm">
                   <Table.HeadCell
