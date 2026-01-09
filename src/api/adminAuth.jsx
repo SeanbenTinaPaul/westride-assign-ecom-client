@@ -10,6 +10,14 @@ export const getOrdersAdmin = async (token) => {
       }
    });
 };
+
+// Paginated orders for Load More
+export const getOrdersAdminPaginated = async (token, skip = 0, take = 20) => {
+   return await axios.get(
+      `${apiUrl}/api/admin/orders-paginated?skip=${skip}&take=${take}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+   );
+};
 //res.json()
 export const updateOrderStatAdmin = async (token, orderIdArr, orderStatus) => {
    return await axios.put(

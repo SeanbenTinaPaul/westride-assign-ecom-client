@@ -1,7 +1,7 @@
 //parent → UpdateOrder.jsx
 import React, { useEffect, useState, useRef } from "react";
 import PropTypes from "prop-types";
-import { getOrdersAdmin, updateOrderStatAdmin } from "@/api/adminAuth";
+import { getOrdersAdminPaginated, updateOrderStatAdmin } from "@/api/adminAuth";
 import useEcomStore from "@/store/ecom-store";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/hooks/use-toast";
@@ -9,35 +9,70 @@ import { formatNumber } from "@/utilities/formatNumber";
 
 function OrderTable(props) {
    const { token } = useEcomStore((state) => state);
-   //    const [orderArr, setOrderArr] = useState([]);
    const { toast } = useToast();
-   //for flowbite table
-   const [currentPage, setCurrentPage] = useState(1);
+   
+   // Table data state
+   const [tableData, setTableData] = useState([]);
+   const [isLoading, setIsLoading] = useState(false);
+   const [isLoadingMore, setIsLoadingMore] = useState(false);
+   const [hasMoreOrders, setHasMoreOrders] = useState(true);
+   const [isTriggerRender, setIsTriggerRender] = useState(false);
+   
+   // Sort and search state
    const [searchTerm, setSearchTerm] = useState("");
    const [sortCol, setSortCol] = useState("");
    const [sortOrder, setSortOrder] = useState("asc");
-   const [tableData, setTableData] = useState([]);
+   
+   // Selection state
    const [selectedRows, setSelectedRows] = useState([]);
    const [selectedStatus, setSelectedStatus] = useState("Completed");
-   const itemsPerPage = 10;
-   const [isTriggerRender, setIsTriggerRender] = useState(false);
+   
+   const itemsPerLoad = 20;
 
+   // Initial load
    useEffect(() => {
-      const fetchOrders = async () => {
-         try {
-            const res = await getOrdersAdmin(token);
-            // console.log("OrderTable res.data", res.data.data);
-            // setOrderArr(res.data.data);
-            setTableData(res.data.data);
-         } catch (err) {
-            console.log(err);
-            throw err;
-         }
-      };
-      fetchOrders();
-   }, [token, setIsTriggerRender, isTriggerRender]);
+      fetchOrders(0, true);
+   }, [token, isTriggerRender]);
 
-   // Sort fuction
+   // Fetch orders with pagination
+   const fetchOrders = async (skip = 0, isInitial = false) => {
+      if (isInitial) {
+         setIsLoading(true);
+      } else {
+         setIsLoadingMore(true);
+      }
+      
+      try {
+         const res = await getOrdersAdminPaginated(token, skip, itemsPerLoad);
+         if (res.data.success) {
+            if (isInitial) {
+               setTableData(res.data.orders);
+            } else {
+               setTableData(prev => [...prev, ...res.data.orders]);
+            }
+            setHasMoreOrders(res.data.hasMore);
+         }
+      } catch (err) {
+         console.log(err);
+         toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load orders"
+         });
+      } finally {
+         setIsLoading(false);
+         setIsLoadingMore(false);
+      }
+   };
+
+   // Load More handler
+   const loadMoreOrders = () => {
+      if (!isLoadingMore && hasMoreOrders) {
+         fetchOrders(tableData.length, false);
+      }
+   };
+
+   // Sort function
    const sortData = (col) => {
       const sortedData = [...tableData].sort((a, b) => {
          if (col === "orderStatus") {
@@ -46,12 +81,8 @@ function OrderTable(props) {
                "Not Process": 1,
                Refunded: 0
             };
-
-            // Get status values, default to "Not Process" if undefined
             const statusA = a[col] || "Not Process";
             const statusB = b[col] || "Not Process";
-
-            // Compare based on priority
             return sortOrder === "asc"
                ? statusOrder[statusA] - statusOrder[statusB]
                : statusOrder[statusB] - statusOrder[statusA];
@@ -60,16 +91,12 @@ function OrderTable(props) {
                succeeded: 1,
                "not process": 0
             };
-            // Get status values, default to "Not Process" if undefined
             const statusA = a[col] || "not process";
             const statusB = b[col] || "not process";
-
-            // Compare based on priority
             return sortOrder === "asc"
                ? statusOrder[statusA] - statusOrder[statusB]
                : statusOrder[statusB] - statusOrder[statusA];
          } else {
-            //nornal sort
             if (a[col] < b[col]) return sortOrder === "asc" ? -1 : 1;
             if (a[col] > b[col]) return sortOrder === "asc" ? 1 : -1;
             return 0;
@@ -80,13 +107,14 @@ function OrderTable(props) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
    };
 
-   //checkbox selection
+   // Checkbox selection
    const handleSelectRow = (id) => {
       setSelectedRows((prev) =>
          prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
       );
    };
-   //checkbox select all
+   
+   // Checkbox select all
    const handleSelectAll = (e) => {
       if (e.target.checked) {
          const allIds = filteredData.map((item) => item.id);
@@ -96,13 +124,11 @@ function OrderTable(props) {
       }
    };
 
-   // bulk status update API
+   // Bulk status update
    const handleBulkUpdate = async () => {
       if (selectedRows.length > 0) {
-         //  console.log("id, status", selectedRows, selectedStatus);
          try {
             const res = await updateOrderStatAdmin(token, selectedRows, selectedStatus);
-            // console.log(res);
             toast({
                title: "Success",
                description: `${res.data.message}`
@@ -114,25 +140,20 @@ function OrderTable(props) {
                title: "Error!",
                description: "Failed to update order status"
             });
-            throw err;
          }
-         setSelectedRows([]); // Clear selection after update
+         setSelectedRows([]);
+         // Re-fetch from beginning to show updated data
+         setTableData([]);
          setIsTriggerRender(!isTriggerRender);
       }
    };
 
    // Filter data based on search term
-   //tableData === [{key:value},{},{}]
    const filteredData = tableData?.filter((obj) =>
       Object.values(obj).some((value) =>
          value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
    );
-
-   // Pagination
-   const totalPages = Math.ceil((filteredData?.length || 0) / itemsPerPage);
-   const startIndex = (currentPage - 1) * itemsPerPage;
-   const paginatedData = filteredData?.slice(startIndex, startIndex + itemsPerPage);
 
    return (
       <div className='relative overflow-x-auto shadow-md rounded-xl bg-card'>
@@ -165,231 +186,90 @@ function OrderTable(props) {
                />
             </div>
          </main>
+
+         {/* Loading indicator */}
+         {isLoading && (
+            <div className='text-center py-4 text-gray-500'>Loading orders...</div>
+         )}
+
          <main className='p-4 bg-card'>
             <div className='border rounded-xl overflow-hidden'>
                <table className='w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400'>
-                  <thead className='text-sm py-auto text-gray-700  bg-gray-50 dark:bg-gray-700 dark:text-gray-400'>
-                     <tr className=''>
-                        <th
-                           scope='col'
-                           className='p-4'
-                        >
+                  <thead className='text-sm py-auto text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400'>
+                     <tr>
+                        <th scope='col' className='p-4'>
                            <div className='flex items-center'>
                               <input
                                  type='checkbox'
-                                 checked={selectedRows.length === filteredData?.length}
+                                 checked={selectedRows.length === filteredData?.length && filteredData?.length > 0}
                                  onChange={(e) => handleSelectAll(e)}
                                  className='w-4 h-4 text-slate-900 shadow bg-gray-100 border-gray-300 rounded focus:ring-0 focus:ring-offset-0 focus:outline-none'
                               />
                            </div>
                         </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3 cursor-pointer'
-                           onClick={() => sortData("id")}
-                        >
+                        <th scope='col' className='px-6 py-3 cursor-pointer' onClick={() => sortData("id")}>
                            <div className='flex items-center whitespace-nowrap'>
                               Order ID
-                              <svg
-                                 className={`w-4 h-4 ml-2  hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${
-                                    sortCol === "id" && sortOrder === "asc" ? "rotate-180" : ""
-                                 }`}
-                                 xmlns='http://www.w3.org/2000/svg'
-                                 fill='none'
-                                 viewBox='0 0 24 24'
-                                 stroke='currentColor'
-                              >
-                                 <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M8 9l4-4 4 4m0 6l-4 4-4-4'
-                                 />
+                              <svg className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${sortCol === "id" && sortOrder === "asc" ? "rotate-180" : ""}`} xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 9l4-4 4 4m0 6l-4 4-4-4' />
                               </svg>
                            </div>
                         </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3'
-                        >
-                           User
-                        </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3 cursor-pointer'
-                           onClick={() => sortData("orderedById")}
-                        >
+                        <th scope='col' className='px-6 py-3'>User</th>
+                        <th scope='col' className='px-6 py-3 cursor-pointer' onClick={() => sortData("orderedById")}>
                            <div className='flex items-center whitespace-nowrap'>
                               User ID
-                              <svg
-                                 className={`w-4 h-4 ml-2  hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${
-                                    sortCol === "orderedById" && sortOrder === "asc"
-                                       ? "rotate-180"
-                                       : ""
-                                 }`}
-                                 xmlns='http://www.w3.org/2000/svg'
-                                 fill='none'
-                                 viewBox='0 0 24 24'
-                                 stroke='currentColor'
-                              >
-                                 <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M8 9l4-4 4 4m0 6l-4 4-4-4'
-                                 />
+                              <svg className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${sortCol === "orderedById" && sortOrder === "asc" ? "rotate-180" : ""}`} xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 9l4-4 4 4m0 6l-4 4-4-4' />
                               </svg>
                            </div>
                         </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3'
-                        >
-                           Address
-                        </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3'
-                        >
-                           Products
-                        </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3 cursor-pointer'
-                           onClick={() => sortData("cartTotal")}
-                        >
+                        <th scope='col' className='px-6 py-3'>Address</th>
+                        <th scope='col' className='px-6 py-3'>Products</th>
+                        <th scope='col' className='px-6 py-3 cursor-pointer' onClick={() => sortData("cartTotal")}>
                            <div className='flex items-center whitespace-nowrap'>
                               Net Total
-                              <svg
-                                 className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${
-                                    sortCol === "cartTotal" && sortOrder === "asc"
-                                       ? "rotate-180"
-                                       : ""
-                                 }`}
-                                 xmlns='http://www.w3.org/2000/svg'
-                                 fill='none'
-                                 viewBox='0 0 24 24'
-                                 stroke='currentColor'
-                              >
-                                 <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M8 9l4-4 4 4m0 6l-4 4-4-4'
-                                 />
+                              <svg className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${sortCol === "cartTotal" && sortOrder === "asc" ? "rotate-180" : ""}`} xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 9l4-4 4 4m0 6l-4 4-4-4' />
                               </svg>
                            </div>
                         </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3 cursor-pointer'
-                           onClick={() => sortData("createdAt")}
-                        >
+                        <th scope='col' className='px-6 py-3 cursor-pointer' onClick={() => sortData("createdAt")}>
                            <div className='flex items-center whitespace-nowrap'>
                               Created At
-                              <svg
-                                 className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${
-                                    sortCol === "createdAt" && sortOrder === "asc"
-                                       ? "rotate-180"
-                                       : ""
-                                 }`}
-                                 xmlns='http://www.w3.org/2000/svg'
-                                 fill='none'
-                                 viewBox='0 0 24 24'
-                                 stroke='currentColor'
-                              >
-                                 <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M8 9l4-4 4 4m0 6l-4 4-4-4'
-                                 />
+                              <svg className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${sortCol === "createdAt" && sortOrder === "asc" ? "rotate-180" : ""}`} xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 9l4-4 4 4m0 6l-4 4-4-4' />
                               </svg>
                            </div>
                         </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3 cursor-pointer'
-                           onClick={() => sortData("updatedAt")}
-                        >
+                        <th scope='col' className='px-6 py-3 cursor-pointer' onClick={() => sortData("updatedAt")}>
                            <div className='flex items-center whitespace-nowrap'>
                               Updated At
-                              <svg
-                                 className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${
-                                    sortCol === "updatedAt" && sortOrder === "asc"
-                                       ? "rotate-180"
-                                       : ""
-                                 }`}
-                                 xmlns='http://www.w3.org/2000/svg'
-                                 fill='none'
-                                 viewBox='0 0 24 24'
-                                 stroke='currentColor'
-                              >
-                                 <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M8 9l4-4 4 4m0 6l-4 4-4-4'
-                                 />
+                              <svg className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${sortCol === "updatedAt" && sortOrder === "asc" ? "rotate-180" : ""}`} xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 9l4-4 4 4m0 6l-4 4-4-4' />
                               </svg>
                            </div>
                         </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3 cursor-pointer'
-                           onClick={() => sortData("status")}
-                        >
+                        <th scope='col' className='px-6 py-3 cursor-pointer' onClick={() => sortData("status")}>
                            <div className='flex items-center whitespace-nowrap'>
                               Payment Status
-                              <svg
-                                 className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${
-                                    sortCol === "status" && sortOrder === "asc" ? "rotate-180" : ""
-                                 }`}
-                                 xmlns='http://www.w3.org/2000/svg'
-                                 fill='none'
-                                 viewBox='0 0 24 24'
-                                 stroke='currentColor'
-                              >
-                                 <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M8 9l4-4 4 4m0 6l-4 4-4-4'
-                                 />
+                              <svg className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${sortCol === "status" && sortOrder === "asc" ? "rotate-180" : ""}`} xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 9l4-4 4 4m0 6l-4 4-4-4' />
                               </svg>
                            </div>
                         </th>
-                        <th
-                           scope='col'
-                           className='px-6 py-3 cursor-pointer'
-                           onClick={() => sortData("orderStatus")}
-                        >
+                        <th scope='col' className='px-6 py-3 cursor-pointer' onClick={() => sortData("orderStatus")}>
                            <div className='flex items-center whitespace-nowrap'>
                               Order Status
-                              <svg
-                                 className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${
-                                    sortCol === "orderStatus" && sortOrder === "asc"
-                                       ? "rotate-180"
-                                       : ""
-                                 }`}
-                                 xmlns='http://www.w3.org/2000/svg'
-                                 fill='none'
-                                 viewBox='0 0 24 24'
-                                 stroke='currentColor'
-                              >
-                                 <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M8 9l4-4 4 4m0 6l-4 4-4-4'
-                                 />
+                              <svg className={`w-4 h-4 ml-2 hover:text-fuchsia-700 hover:scale-125 transition-transform duration-300 ${sortCol === "orderStatus" && sortOrder === "asc" ? "rotate-180" : ""}`} xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 9l4-4 4 4m0 6l-4 4-4-4' />
                               </svg>
                            </div>
                         </th>
                      </tr>
                   </thead>
                   <tbody>
-                     {paginatedData?.map((item) => (
+                     {filteredData?.map((item) => (
                         <tr
                            key={item.id}
                            className='bg-card border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -407,9 +287,7 @@ function OrderTable(props) {
                            <td className='px-6 py-4'>{item.id}</td>
                            <td className='px-6 py-4'>
                               <div className='text-base font-semibold'>{item.orderedBy?.name}</div>
-                              <div className='font-normal text-gray-500'>
-                                 {item.orderedBy?.email}
-                              </div>
+                              <div className='font-normal text-gray-500'>{item.orderedBy?.email}</div>
                            </td>
                            <td className='px-6 py-4'>{item.orderedById}</td>
                            <td
@@ -420,10 +298,7 @@ function OrderTable(props) {
                            </td>
                            <td className='px-6 py-4'>
                               {item.products?.map((prod, i) => (
-                                 <div
-                                    key={i}
-                                    className='whitespace-nowrap'
-                                 >
+                                 <div key={i} className='whitespace-nowrap'>
                                     <div>{prod.product?.title}</div>
                                     <div className='pl-5'>
                                        {prod?.count}x ฿{formatNumber(prod?.price)}
@@ -474,27 +349,24 @@ function OrderTable(props) {
                </table>
             </div>
          </main>
-         {/* Pagination */}
-         <main className='flex items-center justify-end p-4 my-4 bg-card '>
-            <div className='flex items-center space-x-2'>
-               <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className='px-3 py-1 border rounded-lg hover:bg-gray-100 disabled:opacity-50'
+
+         {/* Load More Button */}
+         <main className='flex flex-col items-center justify-center p-4 my-4 bg-card gap-2'>
+            <span className='text-sm text-gray-500'>
+               Showing {filteredData?.length || 0} of {tableData.length} loaded orders
+            </span>
+            {hasMoreOrders && (
+               <Button
+                  onClick={loadMoreOrders}
+                  disabled={isLoadingMore}
+                  className='rounded-xl hover:bg-fuchsia-700'
                >
-                  Previous
-               </button>
-               <span className='text-sm text-gray-700'>
-                  Page {currentPage} of {totalPages}
-               </span>
-               <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className='px-3 py-1 border rounded-lg hover:bg-gray-100 disabled:opacity-50'
-               >
-                  Next
-               </button>
-            </div>
+                  {isLoadingMore ? "Loading..." : "Load More Orders"}
+               </Button>
+            )}
+            {!hasMoreOrders && tableData.length > 0 && (
+               <span className='text-sm text-gray-400'>All orders loaded</span>
+            )}
          </main>
       </div>
    );

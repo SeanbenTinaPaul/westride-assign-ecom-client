@@ -58,14 +58,14 @@ function FormProduct() {
    // const token = useEcomStore((state)=> state.token)
    // const getCategory = useEcomStore((state)=> state.getCategory)
    // const categories = useEcomStore((state)=> state.categories)
-   const { token, getCategory, categories, getProductAdmin, products, brands, getBrand } = useEcomStore(
+   const { token, getCategory, categories, brands, getBrand } = useEcomStore(
       (state) => state
    );
    const [inputForm, setInputForm] = useState(inputProd);
    const [loading, setLoading] = useState(false); //for Btn loading animation
+   const [refreshTrigger, setRefreshTrigger] = useState(0); //to trigger table refresh
    const location = useLocation(); //to re-fetch when navigating back from Edit page
 
-   // const fileInputRef = useRef(null);
    //// ShadCN toast section ////
    const { toast } = useToast();
    const [alert, setAlert] = useState(null); //for alert Warning!
@@ -91,10 +91,10 @@ function FormProduct() {
       getBrand();
    }, [getCategory, getBrand]);
 
-   // Re-fetch products when component mounts or when navigating back from Edit page
+   // Refresh table when navigating back from Edit page
    useEffect(() => {
-      getProductAdmin(1000);
-   }, [getProductAdmin, location]);
+      setRefreshTrigger(prev => prev + 1);
+   }, [location]);
 
    //when filling each key in input box
    const handleOnchange = (e) => {
@@ -179,9 +179,8 @@ function FormProduct() {
             title: "Add Product Success!",
             description: `Product: ${res.data.title}`
          });
-         // toast.success(`Add Product: ${res.data.title} Success.`);
-         //refresh the list after click 'Add Product'
-         getProductAdmin(1000);
+         //refresh the table
+         setRefreshTrigger(prev => prev + 1);
          setInputForm((prev) => ({
             ...prev,
             title: "",
@@ -205,10 +204,9 @@ function FormProduct() {
       }
    };
 
-   //click in TableListProducts.jsx to delete a product + Toastify confirm box
+   //click in TableListProducts.jsx to delete a product + confirm dialog
    const handleDel = async (id) => {
-      const productToDel = products.find((obj) => obj.id === id);
-      setProductToRemove(productToDel);
+      setProductToRemove({ id });
       setShowDialog(true);
    };
    //if user click 'Yes' in Toastify confirm box
@@ -221,14 +219,9 @@ function FormProduct() {
             title: "Product Deleted Successfully",
             description: `Product: ${res.data.data.title}`
          });
-         getProductAdmin(1000);
+         setRefreshTrigger(prev => prev + 1);
          setShowDialog(false);
          setProductToRemove(null);
-         // toast.success(`Delete Product: ${res.data.data.title} Success.`);
-         //rerender TableListProducts if click 'Delete Product' ► click <Trash2/> in TableListProducts.jsx
-
-         /****** */
-         // closeToast();
       } catch (err) {
          console.log(err);
          toast({
@@ -466,12 +459,12 @@ function FormProduct() {
                </AlertDialogContent>
             </AlertDialog>
 
-            {/* Table */}
+            {/* --- Table --- */}
 
             <div className='mt-4 pt-6 max-w-full max-h-[80vh] mx-auto overflow-hidden overflow-y-auto overflow-x-auto'>
                <TableListProducts
-                  products={products}
                   handleDel={handleDel}
+                  refreshTrigger={refreshTrigger}
                />
             </div>
          </div>

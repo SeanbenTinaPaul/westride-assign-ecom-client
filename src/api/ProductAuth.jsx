@@ -36,6 +36,22 @@ export const getProductsByIds = async (ids) => {
    return await axios.post(`${apiUrl}/api/products-by-ids`, { ids });
 };
 
+// Admin paginated products for table pagination
+export const listProductAdminPaginated = async (token, page = 1, limit = 10) => {
+   return await axios.get(
+      `${apiUrl}/api/products-admin-paginated?page=${page}&limit=${limit}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+   );
+};
+
+// Admin search by title (queries DB directly)
+export const searchProductAdmin = async (token, query) => {
+   return await axios.get(
+      `${apiUrl}/api/products-admin-search?q=${encodeURIComponent(query)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+   );
+};
+
 //for EditProd.jsx → FormEditProd.jsx
 //backend res.json()
 export const readProduct = async (id) => {
