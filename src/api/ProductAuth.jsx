@@ -24,6 +24,17 @@ export const listProductAdmin = async (count = 1000) => {
    return await axios.get(`${apiUrl}/api/products-admin/${count}`);
 };
 
+// Paginated products for Load More feature
+export const listProductPaginated = async (skip = 0, take = 20, leastStock = 1) => {
+   return await axios.get(
+      `${apiUrl}/api/products-paginated?skip=${skip}&take=${take}&leastStock=${leastStock}`
+   );
+};
+
+// Products by IDs (for cart sync when products not in current page)
+export const getProductsByIds = async (ids) => {
+   return await axios.post(`${apiUrl}/api/products-by-ids`, { ids });
+};
 
 //for EditProd.jsx → FormEditProd.jsx
 //backend res.json()

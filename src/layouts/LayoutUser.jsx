@@ -1,13 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import SidebarUser from "@/components/userComponent/SidebarUser";
 import HeaderUser from "@/components/userComponent/HeaderUser";
+import useEcomStore from "@/store/ecom-store";
 
 const LayoutUser = () => {
+   const { syncCartProductsFromDB } = useEcomStore((state) => state);
    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
    const contentMargin = isSidebarCollapsed ? "ml-16" : "ml-56";
+
+   // Sync cart products with latest DB data when user layout mounts
+   useEffect(() => {
+      syncCartProductsFromDB();
+   }, [syncCartProductsFromDB]);
    return (
       <div className='min-h-screen flex'>
          <SidebarUser isCollapsed={isSidebarCollapsed} />

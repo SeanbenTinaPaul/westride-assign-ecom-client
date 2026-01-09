@@ -9,20 +9,29 @@ import useEcomStore from "@/store/ecom-store";
 import { PackageSearch } from "lucide-react";
 
 const Shop = () => {
-   const { user, token, products, getProduct } = useEcomStore((state) => state);
+   const { user, token, products, getProduct, loadMoreProducts, hasMoreProducts } = useEcomStore(
+      (state) => state
+   );
    const [isFoundSearch, setIsFoundSearch] = useState(true);
    const [whatTextSearch, setWhatTextSearch] = useState("");
+   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
    useEffect(() => {
       const fetchProducts = async () => {
          try {
-            await getProduct(100, 1);
+            await getProduct(20, 1);
          } catch (err) {
             console.error("Error fetching products:", err);
          }
       };
       fetchProducts();
    }, [getProduct]);
+
+   const handleLoadMore = async () => {
+      setIsLoadingMore(true);
+      await loadMoreProducts(20, 1);
+      setIsLoadingMore(false);
+   };
    //products === [{<data from table Product>},{},..]
    return (
       // Added min-w-[...] to prevent sections from becoming too narrow
@@ -71,7 +80,7 @@ const Shop = () => {
                </section>
             )} */}
             {/* //To make dev responsive → rm "min-w-[...px]" from all div */}
-            <section className='overflow-y-scroll scrollbar-thin  h-[88dvh] py-10 xl:py-16 shadow-md bg-slate-50 rounded-xl flex flex-wrap gap-4 justify-center min-w-[350px] md:px-1  lg:gap-6 xl:gap-16 2xl:gap-10'>
+            <section className='overflow-y-scroll scrollbar-thin  h-[88dvh] py-10 xl:py-16 shadow-md bg-slate-50 rounded-xl flex flex-wrap gap-4 justify-center min-w-[350px] md:px-1  lg:gap-6 xl:gap-16 2xl:gap-10 content-start'>
                {/* {console.log("products", products)} */}
                {Array.isArray(products) ? (
                   products.map((obj) => (
@@ -83,7 +92,18 @@ const Shop = () => {
                ) : (
                   <p>No products available</p>
                )}
-               {/* display products */}
+               {/* Load More Button */}
+               {hasMoreProducts && isFoundSearch && (
+                  <div className='w-full flex justify-center py-4'>
+                     <button
+                        onClick={handleLoadMore}
+                        disabled={isLoadingMore}
+                        className='px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md'
+                     >
+                        {isLoadingMore ? "Loading..." : "Load More Products"}
+                     </button>
+                  </div>
+               )}
             </section>
          </article>
 

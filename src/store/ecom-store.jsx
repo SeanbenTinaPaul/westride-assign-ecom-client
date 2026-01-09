@@ -3,7 +3,7 @@ import axios from "axios";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware"; //ใช้เก็บข้อมูลที่ user กรอกลง inout ไว้ใน localStorage
 import { listCategory } from "../api/CategoryAuth.jsx";
-import { listProduct, listProductAdmin, seachFilterProd } from "../api/ProductAuth.jsx";
+import { listProduct, listProductAdmin, seachFilterProd, listProductPaginated, getProductsByIds } from "../api/ProductAuth.jsx";
 // import _, { update } from "lodash"; // for making unique el array
 import { binarySearchProdId } from "@/utilities/binarySearch.js";
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -15,6 +15,8 @@ const ecomStore = (set, get) => ({
    token: null,
    categories: [],
    products: [],
+   hasMoreProducts: true,
+   productsTotal: 0,
    brands: [],
    carts: [],
    // เก็บค่า totals จาก backend สำหรับ cart (ลดการคำนวณใน frontend)
@@ -83,7 +85,7 @@ const ecomStore = (set, get) => ({
    },
    fetchUserCart: async () => {
       const carts = get().carts;
-      get().getProduct(100, 1);
+      get().getProduct(20, 1);
       try {
          const res = await getCartUser(get().token);
          // console.clear();
@@ -279,17 +281,77 @@ const ecomStore = (set, get) => ({
       }
    },
    //product in table - for Guest/User
-   getProduct: async (count = 100, leastStock = 1) => {
+   getProduct: async (count = 20, leastStock = 1) => {
       try {
          const res = await listProduct(count, leastStock);
          // console.log("getProduct response:", res.data);
-         set({ products: res.data }); //เก็บ res.data►[{},{},..] ที่ส่งมาจาก backend
+         const hasMore = res.data.length >= count;
+         set({ 
+            products: res.data, 
+            hasMoreProducts: hasMore,
+            productsTotal: res.data.length
+         });
 
          get().synCartwithProducts(); // Auto-sync carts after products update
          return res; // Return the response
       } catch (err) {
          console.log(err);
          return undefined; // Return undefined in case of error
+      }
+   },
+
+   // Load More products - appends to existing products
+   loadMoreProducts: async (take = 20, leastStock = 1) => {
+      try {
+         const currentProducts = get().products;
+         const skip = currentProducts.length;
+
+         const res = await listProductPaginated(skip, take, leastStock);
+
+         // Append new products to existing ones
+         set({
+            products: [...currentProducts, ...res.data.products],
+            hasMoreProducts: res.data.hasMore,
+            productsTotal: res.data.total
+         });
+
+         get().synCartwithProducts();
+         return res;
+      } catch (err) {
+         console.log("loadMoreProducts error:", err);
+         return undefined;
+      }
+   },
+
+   // Sync cart items with latest product data from DB (for products not in current page)
+   syncCartProductsFromDB: async () => {
+      const carts = get().carts;
+      if (carts.length === 0) return;
+
+      try {
+         const cartProductIds = carts.map((c) => c.id);
+         const res = await getProductsByIds(cartProductIds);
+
+         // Map: productId -> latest product data
+         const prodMap = new Map(res.data.map((p) => [p.id, p]));
+
+         const updatedCarts = carts.map((cartItem) => {
+            const latestProd = prodMap.get(cartItem.id);
+            if (latestProd) {
+               return {
+                  ...latestProd,
+                  countCart: cartItem.countCart,
+                  buyPrice: latestProd.buyPriceNum, // ใช้ราคาล่าสุด
+                  buyPriceNum: latestProd.buyPriceNum,
+                  preferDiscount: latestProd.preferDiscount
+               };
+            }
+            return cartItem; // fallback if product not found
+         });
+
+         set({ carts: updatedCarts });
+      } catch (err) {
+         console.log("syncCartProductsFromDB error:", err);
       }
    },
 

@@ -12,7 +12,7 @@ import Register from "../pages/auth/Register";
 import LayoutAdmin from "../layouts/LayoutAdmin";
 import { ProtectRouteAdmin } from "./ProtectRouteAdmin";
 import BrandAdmin from "../pages/admin/Brand";
-import Dashboard from "../pages/admin/Dashboard";
+// import Dashboard from "../pages/admin/Dashboard";
 import CategoryAdmin from "../pages/admin/Category";
 import ProductAdmin from "../pages/admin/Product";
 import ManageAdmin from "../pages/admin/Manage";
@@ -52,22 +52,6 @@ const router = createBrowserRouter([
       ]
    },
    {
-      path: "/admin",
-      element: <ProtectRouteAdmin element={<LayoutAdmin />} />,
-      children: [
-         // { index: true, element: <Dashboard /> },
-         { index: true, element: <ManageAdmin /> },
-         { path: "brand", element: <BrandAdmin /> },
-         // { path: "manage", element: <ManageAdmin /> },
-         { path: "category", element: <CategoryAdmin /> },
-         { path: "product", element: <ProductAdmin /> },
-         { path: "product/:id", element: <EditProdAdmin /> },
-         { path: "orders", element: <UpdateOrder /> },
-         { path: "promotion", element: <PromotionAdmin /> }
-      ]
-      //then go to LayoutAdmin > SidebarAdmin → add these children to pages
-   },
-   {
       path: "/user",
       //  element: <LayoutUser />,
       //ให้เรียก component ProtectRouteUser ก่อนถึงจะเรียก LayoutUserได ้
@@ -82,6 +66,22 @@ const router = createBrowserRouter([
          { path: "editprofile", element: <EditProfileUser /> },
          { path: "view-product/:id", element: <ViewProdPageUser /> }
       ]
+   },
+   {
+      path: "/admin",
+      element: <ProtectRouteAdmin element={<LayoutAdmin />} />,
+      children: [
+         // { index: true, element: <Dashboard /> },
+         { index: true, element: <ManageAdmin /> },
+         { path: "brand", element: <BrandAdmin /> },
+         // { path: "manage", element: <ManageAdmin /> },
+         { path: "category", element: <CategoryAdmin /> },
+         { path: "product", element: <ProductAdmin /> },
+         { path: "product/:id", element: <EditProdAdmin /> },
+         { path: "orders", element: <UpdateOrder /> },
+         { path: "promotion", element: <PromotionAdmin /> }
+      ]
+      //then go to LayoutAdmin > SidebarAdmin → add these children to pages
    }
 ]);
 
