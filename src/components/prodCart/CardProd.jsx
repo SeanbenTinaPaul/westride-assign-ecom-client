@@ -19,7 +19,7 @@ import { useToast } from "@/components/hooks/use-toast";
 //-------------------------------------------------------------------
 
 function CardProd({ prodObj }) {
-   const { addToCart, user, token, synCartwithProducts, getProduct } = useEcomStore(
+   const { addToCart, user, token, synCartwithProducts } = useEcomStore(
       (state) => state
    ); //getProduct from DB → set to carts in LocalStorage
    const [isFavorite, setIsFavorite] = useState(false);
@@ -32,7 +32,7 @@ function CardProd({ prodObj }) {
       if (!user || !token) return;
       setIsFavorite(!isFavorite);
       const res = await toggleFavoriteUser(token, prodObj.id);
-      getProduct(100, 1);
+      // SSE: Favorite toggle ไม่ต้อง refresh products - local state จัดการ UI update
       if (!res.data.success) {
          setIsFavorite((prevState) => !prevState); //set back to previous state if error
          toast({

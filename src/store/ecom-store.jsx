@@ -84,13 +84,10 @@ const ecomStore = (set, get) => ({
       // console.log("synCart with Products", carts);
    },
    fetchUserCart: async () => {
-      const carts = get().carts;
+      const localCarts = get().carts;
       get().getProduct(20, 1);
       try {
          const res = await getCartUser(get().token);
-         // console.clear();
-         // console.log("cart now", carts);
-         // console.log("fetchUserCart", res.data);
          // เก็บค่า totals จาก backend (ลดการคำนวณใน frontend)
          // แต่ถ้า backend ไม่มี ProductOnCart (เช่น "No cart yet") ไม่ต้อง set totals
          if (res.data.success && res.data.ProductOnCart) {
@@ -102,49 +99,64 @@ const ecomStore = (set, get) => ({
                }
             });
          }
-         // เฉพาะเมื่อ backend มี ProductOnCart เท่านั้น จึงจะ update local state
-         if (res.data.ProductOnCart?.length > 0) {
-            if (carts.length === 0) {
-               const editKeyProdArr = res.data.ProductOnCart.map((prod) => {
-                  return {
-                     ...prod.product,
-                     id: prod.productId,
-                     countCart: prod.count,
-                     preferDiscount: prod.discount,
-                     buyPriceNum: prod.buyPriceNum
-                  };
-               });
-               // console.log("editKeyProdArr", editKeyProdArr);
-               set({ carts: editKeyProdArr });
-               get().updateStatusSaveToCart(true);
-            } else {
-               // console.log("fetch carts + carts", carts);
-               // ใช้ for loop แทน forEach ตาม AGENTS.md
-               for (const cartItem of carts) {
-                  const existIndex = res.data.ProductOnCart.findIndex(
-                     (prod) => prod.productId === cartItem.id
-                  );
-                  if (existIndex !== -1) {
-                     res.data.ProductOnCart[existIndex] = {
-                        ...cartItem,
-                        countCart: res.data.ProductOnCart[existIndex].count,
-                        buyPrice: cartItem.buyPrice,
-                        buyPriceNum: cartItem.buyPriceNum,
-                        preferDiscount: cartItem.preferDiscount
-                     };
-                  }
-               }
-               // console.log("res.data.ProductOnCart", res.data.ProductOnCart);
-               set({ carts: res.data.ProductOnCart });
+         
+         const dbCarts = res.data.ProductOnCart || [];
+         
+         // Case 1: DB ไม่มี cart เลย → ใช้ localStorage (ไม่ต้องทำอะไร)
+         if (dbCarts.length === 0) {
+            // Keep localStorage carts as-is
+            return;
+         }
+         
+         // Case 2: localStorage ว่าง → ใช้ DB carts
+         if (localCarts.length === 0) {
+            const editKeyProdArr = dbCarts.map((prod) => {
+               return {
+                  ...prod.product,
+                  id: prod.productId,
+                  countCart: prod.count,
+                  preferDiscount: prod.discount,
+                  buyPriceNum: prod.buyPriceNum
+               };
+            });
+            set({ carts: editKeyProdArr });
+            get().updateStatusSaveToCart(true);
+            return;
+         }
+         
+         // Case 3: ทั้งสองมี → Merge โดย:
+         // - Items ใน DB: ใช้ข้อมูลจาก DB (เป็น source of truth)
+         // - Items ใน localStorage แต่ไม่อยู่ใน DB: เก็บไว้ (ยังไม่ได้ sync)
+         
+         // Convert DB carts to proper format
+         const formattedDbCarts = dbCarts.map((prod) => ({
+            ...prod.product,
+            id: prod.productId,
+            countCart: prod.count,
+            preferDiscount: prod.discount,
+            buyPriceNum: prod.buyPriceNum
+         }));
+         
+         // Find localStorage items not in DB (items added but not synced yet)
+         const localOnlyItems = [];
+         for (const localItem of localCarts) {
+            const existsInDb = dbCarts.some((dbItem) => dbItem.productId === localItem.id);
+            if (!existsInDb) {
+               localOnlyItems.push(localItem);
             }
          }
+         
+         // Merge: DB items + local-only items
+         const mergedCarts = [...formattedDbCarts, ...localOnlyItems];
+         set({ carts: mergedCarts });
+         
       } catch (error) {
          console.log("fetchUserCart error", error);
       }
    },
 
    //clik 'Add to cart' in CardProd.jsx to call this fn▼
-   //productObj = 1 prod | ==={id(productId), buyPrice, buyPriceNum, promotion, avgRating}
+   //productObj = 1 prod | ==={id(productId), buyPrice, buyPriceNum, promotion, avgRating, countCart?}
    //productObj จริงๆ up-to-dateอยู่แล้ว แต่แค่รอให้ call addToCart(productData) ที่ CardProd.jsx ก่อน
    addToCart: (productObj) => {
       // console.log("addToCart productObj->", productObj);
@@ -153,23 +165,23 @@ const ecomStore = (set, get) => ({
       2. uniqueCart should unique according to id 
       */
       const carts = get().carts; //is supposed to be updated
-      //   const products = get().products;//is supposed to be updated
+      
+      // ถ้า productObj มี countCart (จาก ViewProdUser) ใช้ค่านั้น, ไม่งั้นใช้ 1 (จาก CardProd)
+      const addQuantity = productObj.countCart || 1;
 
       //check if productObj is already in carts → select the one in carts
-      // const existProd = carts.find((updatedCart) => updatedCart.id === productObj.id);
       const existProdIndex = carts.findIndex((item) => item.id === productObj.id);
       let newCarts;
       if (existProdIndex !== -1) {
-         console.log("existProdIndex");
+         // Product exists in cart - add to existing quantity
          newCarts = [...carts];
          newCarts[existProdIndex] = {
             ...productObj,
-            countCart: (newCarts[existProdIndex].countCart || 0) + 1 //ถ้าส่ง productObj.idมาซ้ำ ด้วยการกด 'Add to cart' === +1 ให้ countCart
+            countCart: (newCarts[existProdIndex].countCart || 0) + addQuantity
          };
       } else {
-         console.log("NOT existProdIndex");
-         // If product doesn't exist, add new entry
-         newCarts = [...carts, { ...productObj, countCart: 1 }];
+         // Product doesn't exist - add new entry with specified quantity
+         newCarts = [...carts, { ...productObj, countCart: addQuantity }];
       }
       set({ carts: newCarts });
       // console.log("new carts", newCarts);

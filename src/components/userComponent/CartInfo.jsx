@@ -1,5 +1,5 @@
 //perent → Shop.jsx
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import useEcomStore from "@/store/ecom-store";

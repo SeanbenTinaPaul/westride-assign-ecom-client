@@ -39,7 +39,6 @@ function ViewProdUser() {
       user,
       token,
       getCategory,
-      getProduct,
       addToCart,
       carts,
       adjustQuantity,
@@ -100,14 +99,19 @@ function ViewProdUser() {
       if (newCount < 1 || newCount > productData.quantity) return;
       setQuantity(newCount);
       adjustQuantity(productData.id, newCount);
-      getProduct(1000, 1); //to update fresh stock from db
+      // SSE: Quantity change ไม่ต้อง refresh - readProduct(id) จัดการ fresh data แล้ว
    };
    // 'Add to Cart' btn - keeps user on current page
    const handleAddToCart = () => {
-      //update countCart to productData
+      // คำนวณราคาที่ถูกหักส่วนลดแล้ว
+      const { buyPriceNum, preferDiscount } = calDiscountedPrice();
+      
+      // update countCart และ buyPriceNum/preferDiscount to productData
       const productForCart = {
          ...productData,
-         countCart: quantity
+         countCart: quantity,
+         buyPriceNum: buyPriceNum,
+         preferDiscount: preferDiscount
       };
       // console.log("productForCart", productForCart);
       addToCart(productForCart);
@@ -228,8 +232,7 @@ function ViewProdUser() {
             thumbsSwiper.destroy();
             setThumbsSwiper(null);
          }
-         // Fetch shop products before navigation
-         await getProduct(100, 1);
+         // SSE: Shop.jsx จะ load products เอง เมื่อ navigate กลับไป
          navigate(-1, { replace: true });
       } catch (err) {
          console.error("Error navigating back:", err);
