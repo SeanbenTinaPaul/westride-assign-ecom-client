@@ -1,7 +1,5 @@
 //perent → Shop.jsx
 import React, { useCallback, useEffect, useState } from "react";
-import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import useEcomStore from "@/store/ecom-store";
@@ -11,7 +9,7 @@ import { useToast } from "@/components/hooks/use-toast";
 import { createCartUser } from "@/api/userAuth";
 import { getPercentDiscount } from "@/utilities/discountHelper";
 
-function CartInfo(props) {
+function CartInfo() {
    const { token, carts, adjustQuantity, removeCart, updateStatusSaveToCart } =
       useEcomStore((state) => state);
    //carts === [{ categoryId:, buyPriceNum:,countCart:,discounts:,promotion:, },{},..]  
@@ -175,7 +173,5 @@ function CartInfo(props) {
       </div>
    );
 }
-
-CartInfo.propTypes = {};
 
 export default CartInfo;
