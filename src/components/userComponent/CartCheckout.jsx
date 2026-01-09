@@ -209,7 +209,7 @@ function CartCheckout({ isCollapsedContext }) {
                         </div>
                      </article>
                      {/* row 2: quantity + price */}
-                     <div className='flex justify-between items-center '>
+                     <div className='flex justify-between items-center drop-shadow'>
                         {/* LEFT:quantity */}
                         <div className='flex items-center space-x-4'>
                            <section className='border px-2 py-1 p-2 rounded-xl Input-3Dshadow'>
@@ -217,11 +217,11 @@ function CartCheckout({ isCollapsedContext }) {
                                  onClick={() => {
                                     adjustQuantity(cart.id, cart.countCart - 1);
                                  }}
-                                 className='px-3 w-8 h-8 rounded-xl Btn-3Dshadow'
+                                 className='px-3 w-8 h-8 rounded-xl Btn-3Dshadow '
                               >
                                  -
                               </button>
-                              <span className='px-4 font-light text-xs'>{cart.countCart}</span>
+                              <span className='px-4 font-light text-xs '>{cart.countCart}</span>
                               <button
                                  disabled={cart.countCart >= cart.quantity}
                                  onClick={() => {
@@ -251,24 +251,24 @@ function CartCheckout({ isCollapsedContext }) {
          <main
             className={`
                fixed bottom-0 ${isCollapsedContext ? "left-24" : "left-64"} right-4 
-               bg-white/80 backdrop-blur-md transition-all duration-500 ease-in-out 
+               bg-white/50 backdrop-blur-md transition-all duration-500 ease-in-out 
                shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]
-               p-4 rounded-t-xl transform
+               p-4 rounded-t-xl transform 
                ${scrolledToBottom ? "translate-y-0" : "translate-y-10 hover:translate-y-0"}
             `}
          >
             {carts.length > 0 && (
                <article className='w-full p-2 rounded-xl Input-3Dshadow'>
                   {/* className="bg-card p-2 mb-2 rounded-md shadow-md" */}
-                  <section className='flex justify-between p-2 mb-2 '>
+                  <section className='flex justify-between p-2 mb-2 drop-shadow'>
                      <p>Total</p>
                      <p>฿{formatNumber(total)}</p>
                   </section>
-                  <section className='flex justify-between  p-2 mb-2  '>
+                  <section className='flex justify-between  p-2 mb-2 drop-shadow'>
                      <p>Discounts</p>
                      <p>-฿{formatNumber(totalDiscount)}</p>
                   </section>
-                  <section className='flex justify-between  p-2 mb-2  '>
+                  <section className='flex justify-between  p-2 mb-2 drop-shadow'>
                      <p>Net Price</p>
                      <p>฿{formatNumber(totalNet)}</p>
                   </section>
@@ -278,7 +278,7 @@ function CartCheckout({ isCollapsedContext }) {
             <Link>
                <Button
                   variant='primary'
-                  className='w-full mt-4 text-white py-2 shadow-md rounded-xl Btn-gradientFuchsia'
+                  className='w-full mt-4 text-white py-2 shadow-md rounded-xl Btn-gradientFuchsia drop-shadow'
                   disabled={carts.length === 0}
                   onClick={handleCreateCart}
                >
@@ -289,7 +289,7 @@ function CartCheckout({ isCollapsedContext }) {
                <Button
                   variant='secondary'
                   type='button'
-                  className='w-full mt-4  py-2 shadow-md rounded-xl bg-slate-50'
+                  className='w-full mt-4  py-2 shadow-md rounded-xl bg-slate-50 drop-shadow'
                >
                   Continue Shopping
                </Button>
