@@ -1,7 +1,6 @@
 //parent → HistoryUser.jsx
 import React, { useEffect, useState } from "react";
-import PropTypes from "prop-types";
-import { addRatingUser, getOrderUser } from "@/api/userAuth";
+import { addRatingUser, getOrderUserPaginated } from "@/api/userAuth";
 import { reqRefund } from "@/api/PaymentAuth";
 import useEcomStore from "@/store/ecom-store";
 import { formatNumber } from "@/utilities/formatNumber";
@@ -21,7 +20,7 @@ import {
 import StarRating from "./StarRating";
 import { Star, ChevronUp, ChevronDown } from "lucide-react";
 
-function HistoryList(props) {
+function HistoryList() {
    const { token } = useEcomStore((state) => state);
    const [orderList, setOrderList] = useState([]);
    const [selectedOrderId, setSelectedOrderId] = useState(null);
@@ -31,20 +30,31 @@ function HistoryList(props) {
    const [ratings, setRatings] = useState({}); //rating per prod
    const [isLoading, setIsLoading] = useState(false); //to prevent user click 'submit feedback'during call addRatingUser api
    const [isCollapsedByOrderId, setIsCollapsedByOrderId] = useState({});
+   const [hasMoreOrders, setHasMoreOrders] = useState(true);
+   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
    // move fetch fn outside useEffect for reuse
    const fetchOrderList = async () => {
       try {
-         const res = await getOrderUser(token);
-         // console.log("res.data OrderList", res.data.data);
-         setOrderList(res.data.data);
+         const res = await getOrderUserPaginated(token, 0, 10);
+         setOrderList(res.data.data || []);
+         setHasMoreOrders(res.data.hasMore);
       } catch (err) {
          console.error("Error fetching orders:", err);
-         // toast({
-         //    variant: "destructive",
-         //    title: "Error",
-         //    description: "Failed to load order history"
-         // });
+      }
+   };
+
+   // Load More function
+   const loadMoreOrders = async () => {
+      setIsLoadingMore(true);
+      try {
+         const res = await getOrderUserPaginated(token, orderList.length, 20);
+         setOrderList(prev => [...prev, ...res.data.data]);
+         setHasMoreOrders(res.data.hasMore);
+      } catch (err) {
+         console.error("Error loading more orders:", err);
+      } finally {
+         setIsLoadingMore(false);
       }
    };
 
@@ -56,9 +66,18 @@ function HistoryList(props) {
       try {
          setIsLoading(true);
          const res = await reqRefund(token, orderId);
-         // console.log("res.data refund", res.data);
          if (res.data.success) {
-            await fetchOrderList(); //refresh orderList
+            // Update order in state instead of re-fetching (preserve Load More position)
+            setOrderList(prev => prev.map(order => 
+               order.id === orderId 
+                  ? { 
+                     ...order, 
+                     orderStatus: "Refunded", 
+                     refundAmount: res.data.refundAmount,
+                     updatedAt: new Date().toISOString()
+                  }
+                  : order
+            ));
             if (res.data.confirmEmail && res.data.expireAT) {
                const unixTimestamp = res.data.expireAT;
                const date = new Date(unixTimestamp * 1000);
@@ -148,10 +167,7 @@ function HistoryList(props) {
          }
 
          const payload = { ratings: orderRatings };
-         // console.log("orderId->", orderId);
-         // console.log("payload->", payload);
          const res = await addRatingUser(token, payload);
-         // console.log("res.data", res);
          //delete key:value from ratings obj after api addRating
          if (res.data.success) {
             setRatings((prev) => {
@@ -159,11 +175,15 @@ function HistoryList(props) {
                orderRatings.forEach((rating) => {
                   delete updatedRatings[`${rating.orderId}-${rating.productId}`];
                });
-               return updatedRatings; // ratings = updatedRatings
+               return updatedRatings;
             });
+            
+            // Update order in state to reflect new ratings (instead of full re-fetch)
+            // This keeps Load More position, but we need to update product.ratings array
+            // For simplicity, we refetch the current loaded orders
+            await fetchOrderList();
          }
 
-         await fetchOrderList();
          toast({
             title: "Success",
             description: "Thank you for your feedback!"
@@ -469,6 +489,18 @@ function HistoryList(props) {
                      </AlertDialogFooter>
                   </AlertDialogContent>
                </AlertDialog>
+               {/* Load More Button */}
+               {hasMoreOrders && (
+                  <div className='w-full flex justify-center py-6'>
+                     <button
+                        onClick={loadMoreOrders}
+                        disabled={isLoadingMore}
+                        className='px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md'
+                     >
+                        {isLoadingMore ? "Loading..." : "Load More Orders"}
+                     </button>
+                  </div>
+               )}
             </main>
          ) : (
             <main className='flex flex-col items-center justify-center h-screen'>
@@ -482,7 +514,5 @@ function HistoryList(props) {
       </div>
    );
 }
-
-HistoryList.propTypes = {};
 
 export default HistoryList;

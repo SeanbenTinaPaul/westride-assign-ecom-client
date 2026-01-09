@@ -50,6 +50,15 @@ export const getOrderUser = async (token) => {
       }
    });
 };
+
+// Paginated order history for Load More feature
+export const getOrderUserPaginated = async (token, skip = 0, take = 10) => {
+   return await axios.get(
+      `${apiUrl}/api/user/order-paginated?skip=${skip}&take=${take}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+   );
+};
+
 export const updateProfileUser = async (token, info) => {
    return await axios.patch(`${apiUrl}/api/user/update-profile`, info, {
       headers: {
