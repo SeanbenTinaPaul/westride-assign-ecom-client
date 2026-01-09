@@ -1,6 +1,5 @@
 //parent → Brand.jsx
 import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,7 +12,6 @@ import {
    AlertDialogFooter,
    AlertDialogHeader,
    AlertDialogTitle,
-   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +29,7 @@ import useEcomStore from "@/store/ecom-store";
 import { createBrand, removeBrand, updateBrand } from "@/api/BrandAuth";
 import UploadPersonPic from "../userComponent/UploadPersonPic";
 
-function FormBrandAdmin(props) {
+function FormBrandAdmin() {
    const { token, getBrand, brands } = useEcomStore((state) => state);
 
    const [brandForm, setBrandForm] = useState({});
@@ -455,7 +453,5 @@ function FormBrandAdmin(props) {
       </div>
    );
 }
-
-FormBrandAdmin.propTypes = {};
 
 export default FormBrandAdmin;

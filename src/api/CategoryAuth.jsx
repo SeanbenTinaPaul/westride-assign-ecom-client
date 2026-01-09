@@ -26,6 +26,14 @@ export const removeCategory = async (token,id) => {
   })
 }
 
+export const updateCategory = async (token, id, form) => {
+  return await axios.patch(`${apiUrl}/api/category/${id}`, form, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+}
+
 /*
 axios.get: 2 arguments (url, option-res.headers)
 axios.post: 2 or 3 arguments (url, res.body), (url, res.body, option-res.headers)

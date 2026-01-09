@@ -1,6 +1,5 @@
 //for building category form ►►► to import to CategoryAdmin.jsx ('/admin/category')
 import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
 //component UI
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/hooks/use-toast";
 //api
-import { createCategory, removeCategory } from "../../api/CategoryAuth";
+import { createCategory, removeCategory, updateCategory } from "../../api/CategoryAuth";
 //Global state
 import useEcomStore from "../../store/ecom-store";
 //icons
@@ -27,34 +26,23 @@ import {
    FileText,
    Trash2,
    AlertCircle,
+   Pencil,
 } from "lucide-react";
 
 function FormCategory() {
    const token = useEcomStore((state) => state.token);
 
    const [name, setName] = useState("");
+   const [isEdit, setIsEdit] = useState(false);
+   const [editingCategory, setEditingCategory] = useState(null);
 
-   //เก็บ res ที่ส่งมาจาก backend เมื่อเรียกใช้ฟังก์ชัน listCategory(token)
-   //    const [categories, setCategories] = useState([]);
-
-   //ถ้าโหลด<FormCategory /> ที่Category.jsx จะทําการเรียกใช้ฟังก์ชัน getCategory() อัตโนมัติ
    const categories = useEcomStore((state) => state.categories);
    const getCategory = useEcomStore((state) => state.getCategory);
-   // console.log(categories);
    const { toast } = useToast();
-   const [alert, setAlert] = useState(null); //for alert Warning!
-   const [showDialog, setShowDialog] = useState(false); //for alert Confirm
+   const [alert, setAlert] = useState(null);
+   const [showDialog, setShowDialog] = useState(false); //for delete confirm
+   const [showUpdateDialog, setShowUpdateDialog] = useState(false); //for update confirm
    const [categoryToRemove, setCategoryToRemove] = useState({});
-
-   /*
-   useEffect(() => {
-      async function getCategoryData() {
-         const result = await getCategory(token);
-         console.log('category->', result);
-         }
-         getCategoryData();
-         }, [token, getCategory]);
-         */
 
    useEffect(() => {
       getCategory().then((result) => {
@@ -74,43 +62,78 @@ function FormCategory() {
                <AlertDescription>Please enter a category name.</AlertDescription>
             </Alert>
          );
-         //hide this alert after 3 seconds
          setTimeout(() => {
             setAlert(null);
          }, 3000);
          return;
       }
 
-      // toast.warning("Please enter category name.");
-
       try {
-         //เอา name(string ธรรมดา) มาครอบ {..} ► ได้ { name: <string value> }
-         //ระวัง: ถ้าส่งตรงนี้ไป จะได้ไปสร้างข้อมูลใน DB
          const res = await createCategory(token, { name });
-         // console.log(res.data.name);
 
          toast({
             title: "Add Category Success!",
             description: `Category: ${res.data.name}`
          });
 
-         getCategory(); //to update the list
-         setName(""); //to empty the input text after click 'Add Category' btn
+         getCategory();
+         setName("");
          setAlert(null);
-         //  e.target.reset();//to empty the input text after click 'Add Category' btn
       } catch (err) {
          console.log(err);
       }
    };
 
-   //remove single category Btn
+   // ----------- Edit a category ------------
+   const handleEdit = (id, categoryName) => {
+      setIsEdit(true);
+      setEditingCategory({ id, name: categoryName });
+      setName(categoryName);
+      //auto scroll to top when click edit
+      setTimeout(() => {
+         window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 100);
+   };
+
+   const handleUpdate = () => {
+      if (!name || name.trim() === "") {
+         toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Please enter a category name."
+         });
+         return;
+      }
+      setShowUpdateDialog(true);
+   };
+
+   const confirmUpdate = async () => {
+      try {
+         const res = await updateCategory(token, editingCategory.id, { name: name.trim() });
+         
+         if (res.data.success) {
+            toast({
+               title: "Update Success!",
+               description: `Category updated to: ${res.data.data.name}`
+            });
+            getCategory();
+            handleCancel();
+         }
+         setShowUpdateDialog(false);
+      } catch (err) {
+         console.log(err);
+         toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to update category"
+         });
+      }
+   };
+
+   // ----------- Remove a category ------------
    const handleRemove = (id, categoryName) => {
-      //bring id and name of category.item when click <Trash2 />
       setCategoryToRemove({ ...categoryToRemove, id, name: categoryName });
       setShowDialog(true);
-      //true to ONLY show dialog
-      //Click 'Cancel' → setShowDialog(false);
-      //Click 'Continue' → call confirmRemove() ▼
    };
 
    const confirmRemove = async () => {
@@ -128,52 +151,13 @@ function FormCategory() {
       }
    };
 
-   // const handleRemove = async (id, name) => {
-   //    console.log(id);
-   //    try {
-   //       //confirm to remove
-   //       setAlert(
-   //          <AlertDialog>
-   //             <AlertDialogTrigger asChild>
-   //                {/* <Button variant='outline'>Show Dialog</Button> */}
-   //             </AlertDialogTrigger>
-   //             <AlertDialogContent>
-   //                <AlertDialogHeader>
-   //                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-   //                   <AlertDialogDescription>
-   //                      his action cannot be undone. This will permanently delete your category and
-   //                      remove its all products data from our servers.
-   //                   </AlertDialogDescription>
-   //                </AlertDialogHeader>
-   //                <AlertDialogFooter>
-   //                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-   //                   <AlertDialogAction>Continue</AlertDialogAction>
-   //                </AlertDialogFooter>
-   //             </AlertDialogContent>
-   //          </AlertDialog>
-   //       );
+   // ----------- Cancel edit mode ------------
+   const handleCancel = () => {
+      setIsEdit(false);
+      setEditingCategory(null);
+      setName("");
+   };
 
-   //       const res = await removeCategory(token, id);
-
-   //       // setAlert(
-   //       //    <Alert variant='destructive'>
-   //       //       <AlertCircle className='h-4 w-4' />
-   //       //       <AlertTitle>Warning!</AlertTitle>
-   //       //       <AlertDescription>{`You've removed category: ${name}.`}</AlertDescription>
-   //       //    </Alert>
-   //       // );
-   //       toast({
-   //          title: "You've removed category!",
-   //          description: `Category: ${name}`
-   //       });
-   //       // toast.success(`Remove Category: ${name} Success.`);
-
-   //       getCategory(token);
-   //       console.log(res);
-   //    } catch (err) {
-   //       console.log(err);
-   //    }
-   // };
    return (
       <div>
          <div className='w-full space-y-6 max-w-3xl  '>
@@ -181,13 +165,13 @@ function FormCategory() {
                <CardHeader>
                   <CardTitle className='flex items-center gap-2'>
                      <PackagePlus className='w-5 h-5' />
-                     Category register
+                     {isEdit ? "Edit Category" : "Category register"}
                   </CardTitle>
                </CardHeader>
                <CardContent>
                   <div className='mb-4'>{alert}</div>
                   <form
-                     onSubmit={handleSubmit}
+                     onSubmit={isEdit ? (e) => { e.preventDefault(); handleUpdate(); } : handleSubmit}
                      className='flex gap-4'
                   >
                      <input
@@ -196,12 +180,31 @@ function FormCategory() {
                         placeholder='Enter a category name'
                         className='w-full p-2 rounded-xl Input-3Dshadow'
                      />
-                     <Button
-                        type='submit'
-                        className=' hover:bg-slate-500 rounded-xl transition-all duration-300 ease-in-out'
-                     >
-                        Add Category
-                     </Button>
+                     {isEdit ? (
+                        <div className='flex gap-2'>
+                           <Button
+                              type='submit'
+                              className='bg-amber-600 hover:bg-amber-500 rounded-xl transition-all duration-300 ease-in-out'
+                           >
+                              Update
+                           </Button>
+                           <Button
+                              type='button'
+                              variant='outline'
+                              onClick={handleCancel}
+                              className='rounded-xl'
+                           >
+                              Cancel
+                           </Button>
+                        </div>
+                     ) : (
+                        <Button
+                           type='submit'
+                           className=' hover:bg-slate-500 rounded-xl transition-all duration-300 ease-in-out'
+                        >
+                           Add Category
+                        </Button>
+                     )}
                   </form>
                </CardContent>
             </Card>
@@ -219,18 +222,28 @@ function FormCategory() {
                            <tr>
                               <th className='px-6 py-3'>ID</th>
                               <th className='px-6 py-3'>Category Title</th>
-                              <th className='px-6 py-3 text-right'>Remove</th>
+                              <th className='px-6 py-3 text-right'>Actions</th>
                            </tr>
                         </thead>
                         <tbody>
                            {categories.map((item) => (
                               <tr
                                  key={item.id}
-                                 className='bg-white border-b hover:bg-gray-50'
+                                 className={`border-b hover:bg-gray-50 ${
+                                    editingCategory?.id === item.id ? 'bg-amber-50' : 'bg-white'
+                                 }`}
                               >
                                  <td className='px-6 py-4'>{item.id}</td>
                                  <td className='px-6 py-4'>{item.name}</td>
                                  <td className='px-6 py-4 text-right'>
+                                    <Button
+                                       variant='ghost'
+                                       size='icon'
+                                       onClick={() => handleEdit(item.id, item.name)}
+                                       className='hover:text-amber-600 hover:scale-125 transition-all duration-300 ease-in-out mr-2'
+                                    >
+                                       <Pencil className='w-4 h-4' />
+                                    </Button>
                                     <Button
                                        variant='ghost'
                                        size='icon'
@@ -244,6 +257,7 @@ function FormCategory() {
                            ))}
                         </tbody>
                      </table>
+                     {/* Delete Confirm Dialog */}
                      <AlertDialog
                         open={showDialog}
                         onOpenChange={setShowDialog}
@@ -269,6 +283,30 @@ function FormCategory() {
                            </AlertDialogFooter>
                         </AlertDialogContent>
                      </AlertDialog>
+                     {/* Update Confirm Dialog */}
+                     <AlertDialog
+                        open={showUpdateDialog}
+                        onOpenChange={setShowUpdateDialog}
+                     >
+                        <AlertDialogContent>
+                           <AlertDialogHeader>
+                              <AlertDialogTitle>Confirm Update</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                 <div>
+                                    Update category from "<strong>{editingCategory?.name}</strong>" to "<strong>{name}</strong>"?
+                                 </div>
+                              </AlertDialogDescription>
+                           </AlertDialogHeader>
+                           <AlertDialogFooter>
+                              <AlertDialogCancel onClick={confirmUpdate}>
+                                 Yes, update
+                              </AlertDialogCancel>
+                              <AlertDialogAction onClick={() => setShowUpdateDialog(false)}>
+                                 Cancel
+                              </AlertDialogAction>
+                           </AlertDialogFooter>
+                        </AlertDialogContent>
+                     </AlertDialog>
                   </div>
                </CardContent>
             </Card>
@@ -276,7 +314,5 @@ function FormCategory() {
       </div>
    );
 }
-
-FormCategory.propTypes = {};
 
 export default FormCategory;
