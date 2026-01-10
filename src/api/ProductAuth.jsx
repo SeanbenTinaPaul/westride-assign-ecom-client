@@ -63,6 +63,11 @@ export const readProductImages = async (id) => {
    return await axios.get(`${apiUrl}/api/product/${id}/images`);
 };
 
+//for FlashSaleProd.jsx → get products with active flash sale
+export const listFlashSaleProducts = async () => {
+   return await axios.get(`${apiUrl}/api/products/flash-sale`);
+};
+
 //backend res.json()
 export const updateProduct = async (token, id, form) => {
    return await axios.patch(`${apiUrl}/api/product/${id}`, form, {

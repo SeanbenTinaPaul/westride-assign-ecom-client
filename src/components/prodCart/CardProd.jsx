@@ -1,15 +1,16 @@
 //parent → ShopUser.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { formatNumber } from "@/utilities/formatNumber";
 import { getPercentDiscount, calculateDiscount } from "@/utilities/discountHelper";
+import { getFlashSaleInfo, formatFlashSaleDate, calculateCountdown, formatCountdown } from "@/utilities/flashSaleHelper";
 //component ui
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 //icons
-import { Heart, ShoppingCart, Star, StarHalf, Slack } from "lucide-react";
+import { Heart, ShoppingCart, Star, StarHalf, Slack, Flame, Zap } from "lucide-react";
 import useEcomStore from "@/store/ecom-store";
 
 import { motion } from "motion/react";
@@ -135,6 +136,40 @@ function CardProd({ prodObj }) {
       return getPercentDiscount(prodObj?.promotion, prodObj?.discounts);
    };
 
+   // Flash Sale: ตรวจสอบสถานะและคำนวณ countdown (ใช้ useMemo เพื่อหลีกเลี่ยง infinite loop)
+   const flashSaleInfo = useMemo(() => getFlashSaleInfo(prodObj?.discounts), [prodObj?.discounts]);
+   const flashSaleStatus = flashSaleInfo?.status;
+   const flashSaleEndDateStr = flashSaleInfo?.endDate?.toISOString?.() || null;
+   
+   // State สำหรับ countdown timer
+   const [countdown, setCountdown] = useState(null);
+   
+   // Effect สำหรับ client-side countdown (ทุก 1 วินาที)
+   useEffect(() => {
+      if (flashSaleStatus !== "active" || !flashSaleEndDateStr) {
+         setCountdown(null);
+         return;
+      }
+
+      const endDate = new Date(flashSaleEndDateStr);
+      
+      // Initial countdown
+      setCountdown(calculateCountdown(endDate));
+
+      // Update ทุก 1 วินาที
+      const interval = setInterval(() => {
+         const newCountdown = calculateCountdown(endDate);
+         setCountdown(newCountdown);
+         
+         // หยุด interval เมื่อหมดเวลา
+         if (newCountdown.isExpired) {
+            clearInterval(interval);
+         }
+      }, 1000);
+
+      return () => clearInterval(interval);
+   }, [flashSaleStatus, flashSaleEndDateStr]);
+
    return (
       <motion.div
          initial={{ opacity: 0, scale: 0 }}
@@ -164,10 +199,37 @@ function CardProd({ prodObj }) {
                         className='w-full h-full object-cover bg-gradient-to-tr from-slate-100 to-slate-200'
                      />
                   </Link>
-                  {renderPercentDiscount() && (
-                     <Badge className='absolute top-2 right-2 lg:top-4 lg:right-4 bg-red-500 px-1'>
-                        -{renderPercentDiscount()}%
+                  {/* Flash Sale / Discount Badges */}
+                  {flashSaleStatus === "pending" ? (
+                     // Pending State: แสดง amber badges + วันที่เริ่ม + ??%
+                     <>
+                        <Badge className='absolute top-2 right-2 lg:top-3 lg:right-3 bg-amber-500 px-1 text-[10px] lg:text-xs flex items-center gap-1'>
+                           <Zap className='w-3 h-3' />
+                           {formatFlashSaleDate(flashSaleInfo?.startDate)}
+                        </Badge>
+                        <Badge className='absolute top-7 right-2 lg:top-9 lg:right-3 bg-amber-400 px-1 text-[10px] lg:text-xs'>
+                           -??%
+                        </Badge>
+                        {/* ถ้ามี promotion อยู่แล้ว → แสดง promotion badge ด้านล่าง */}
+                        {prodObj?.promotion && (
+                           <Badge className='absolute top-12 right-2 lg:top-[60px] lg:right-3 bg-red-500 px-1 text-[10px] lg:text-xs'>
+                              -{prodObj.promotion}%
+                           </Badge>
+                        )}
+                     </>
+                  ) : flashSaleStatus === "active" && countdown && !countdown.isExpired ? (
+                     // Active State: แสดง countdown + ส่วนลดสูงสุด
+                     <Badge className='absolute top-2 right-2 lg:top-3 lg:right-3 bg-red-500 px-1 text-[10px] lg:text-xs flex items-center gap-1'>
+                        <Flame className='w-3 h-3' />
+                        {formatCountdown(countdown)} -{renderPercentDiscount()}%
                      </Badge>
+                  ) : (
+                     // Expired/Normal State: แสดง promotion badge ตามเดิม (ถ้ามี)
+                     renderPercentDiscount() && (
+                        <Badge className='absolute top-2 right-2 lg:top-4 lg:right-4 bg-red-500 px-1'>
+                           -{renderPercentDiscount()}%
+                        </Badge>
+                     )
                   )}
                   {/* fav btn */}
                   {user && (

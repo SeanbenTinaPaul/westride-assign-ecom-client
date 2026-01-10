@@ -1,15 +1,16 @@
 //parent → ViewProdPageUser.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { formatNumber } from "@/utilities/formatNumber";
 import { renderStar } from "@/utilities/renderStars";
 import { getPercentDiscount, calculateDiscount } from "@/utilities/discountHelper";
+import { getFlashSaleInfo, formatFlashSaleDate, calculateCountdown, formatCountdown } from "@/utilities/flashSaleHelper";
 
 //component ui
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 //icons
-import { Heart, ShoppingCart, ChevronLeft, ShoppingBasket, Hourglass, Slack } from "lucide-react";
+import { Heart, ShoppingCart, ChevronLeft, ShoppingBasket, Hourglass, Slack, Zap, Flame } from "lucide-react";
 import useEcomStore from "@/store/ecom-store";
 import { createCartUser } from "@/api/userAuth";
 import { Link, useParams, useNavigate } from "react-router-dom";
@@ -352,6 +353,30 @@ function ViewProdUser() {
       }
    };
 
+   // Flash Sale: ตรวจสอบสถานะและคำนวณ countdown (ใช้ useMemo เพื่อหลีกเลี่ยง infinite loop)
+   const flashSaleInfo = useMemo(() => getFlashSaleInfo(productData?.discounts), [productData?.discounts]);
+   const flashSaleStatus = flashSaleInfo?.status;
+   const flashSaleEndDateStr = flashSaleInfo?.endDate?.toISOString?.() || null;
+   
+   // State สำหรับ countdown timer (ต้องอยู่ก่อน early return)
+   const [flashCountdown, setFlashCountdown] = useState(null);
+   
+   // Effect สำหรับ client-side countdown (ทุก 1 วินาที)
+   useEffect(() => {
+      if (flashSaleStatus !== "active" || !flashSaleEndDateStr) {
+         setFlashCountdown(null);
+         return;
+      }
+      const endDate = new Date(flashSaleEndDateStr);
+      setFlashCountdown(calculateCountdown(endDate));
+      const interval = setInterval(() => {
+         const newCountdown = calculateCountdown(endDate);
+         setFlashCountdown(newCountdown);
+         if (newCountdown.isExpired) clearInterval(interval);
+      }, 1000);
+      return () => clearInterval(interval);
+   }, [flashSaleStatus, flashSaleEndDateStr]);
+   
    // Show loading state
    if (isLoading) {
       return (
@@ -394,10 +419,29 @@ function ViewProdUser() {
                {/* top-left : title discount star brand sold fav  */}
                <header className='flex flex-col h-52 w-full p-4 gap-2 '>
                   <p className='mb-4 font-medium text-2xl drop-shadow '>{productData.title}</p>
-                  {renderPercentDiscount() && (
-                     <Badge className='ml-4 w-12 bg-red-500 py-1 px-2'>
-                        -{renderPercentDiscount()}%
+                  {/* Flash Sale / Discount Badges */}
+                  {flashSaleStatus === "pending" ? (
+                     <div className='ml-4 flex flex-wrap gap-2'>
+                        <Badge className='bg-amber-500 py-1 px-2 flex items-center gap-1'>
+                           <Zap className='w-4 h-4' />
+                           {formatFlashSaleDate(flashSaleInfo?.startDate)}
+                        </Badge>
+                        <Badge className='bg-amber-400 py-1 px-2'>-??%</Badge>
+                        {productData?.promotion && (
+                           <Badge className='bg-red-500 py-1 px-2'>-{productData.promotion}%</Badge>
+                        )}
+                     </div>
+                  ) : flashSaleStatus === "active" && flashCountdown && !flashCountdown.isExpired ? (
+                     <Badge className='ml-4 w-fit bg-red-500 py-1 px-2 flex items-center gap-1'>
+                        <Flame className='w-4 h-4' />
+                        {formatCountdown(flashCountdown)} -{renderPercentDiscount()}%
                      </Badge>
+                  ) : (
+                     renderPercentDiscount() && (
+                        <Badge className='ml-4 w-12 bg-red-500 py-1 px-2'>
+                           -{renderPercentDiscount()}%
+                        </Badge>
+                     )
                   )}
 
                   <section className='flex justify-between'>

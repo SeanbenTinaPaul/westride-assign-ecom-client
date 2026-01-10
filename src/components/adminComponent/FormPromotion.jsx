@@ -698,7 +698,7 @@ function FormPromotion() {
                               checked={!isPromotion}
                               onCheckedChange={() => setIsPromotion(false)}
                            />
-                           <span>Seasonal Discount</span>
+                           <span>Flash Sale Discount</span>
                         </div>
                         <div className='flex items-center gap-2'>
                            <Checkbox

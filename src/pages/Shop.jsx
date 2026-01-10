@@ -9,7 +9,7 @@ import useEcomStore from "@/store/ecom-store";
 import { PackageSearch } from "lucide-react";
 
 const Shop = () => {
-   const { user, token, products, getProduct, loadMoreProducts, hasMoreProducts } = useEcomStore(
+   const { products, getProduct, loadMoreProducts, hasMoreProducts } = useEcomStore(
       (state) => state
    );
    const [isFoundSearch, setIsFoundSearch] = useState(true);
