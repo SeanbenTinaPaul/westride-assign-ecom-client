@@ -433,7 +433,7 @@ function ViewProdUser() {
                      </div>
                   ) : flashSaleStatus === "active" && flashCountdown && !flashCountdown.isExpired ? (
                      <Badge className='ml-4 w-fit bg-red-500 py-1 px-2 flex items-center gap-1'>
-                        <Flame className='w-4 h-4' />
+                        <Flame className='w-4 h-4 animate-pulse' />
                         {formatCountdown(flashCountdown)} -{renderPercentDiscount()}%
                      </Badge>
                   ) : (
@@ -447,7 +447,7 @@ function ViewProdUser() {
                   <section className='flex justify-between'>
                      <div className='mt-1 ml-4 flex items-center space-x-1'>
                         {renderStar(productData.avgRating)}
-                        <span className='text-lg text-gray-500 ml-1  '>
+                        <span className='text-lg text-gray-500 ml-1 drop-shadow '>
                            {productData.avgRating?.toFixed(1)}
                         </span>
                      </div>
@@ -536,7 +536,7 @@ function ViewProdUser() {
                               <button
                                  onClick={() => handleQuantityChange(1)}
                                  disabled={quantity >= productData.quantity}
-                                 className='px-3 w-14 h-10 rounded-2xl Btn-3Dshadow'
+                                 className='px-3 w-14 h-10 rounded-2xl Btn-3Dshadow '
                               >
                                  +
                               </button>

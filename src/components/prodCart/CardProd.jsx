@@ -64,7 +64,7 @@ function CardProd({ prodObj }) {
             stars.push(
                <Star
                   key={`full-star-${i}`}
-                  className='w-4 h-4 fill-current text-yellow-500 max-lg:w-3 max-lg:h-3'
+                  className='w-4 h-4 fill-current drop-shadow text-yellow-500 max-lg:w-3 max-lg:h-3'
                />
             );
          } else if (i - 0.5 <= rate) {
@@ -254,7 +254,7 @@ function CardProd({ prodObj }) {
                   <CardHeader className='lg:h-24 lg:px-4 lg:py-2 py-1 px-2 '>
                      {/* className='flex justify-between items-start' */}
                      <div className='flex justify-between items-start '>
-                        <h3 className='lg:font-medium lg:text-sm text-xs truncate'>
+                        <h3 className='lg:font-medium lg:text-sm text-xs drop-shadow truncate'>
                            {prodObj.title}
                         </h3>
                         <Badge className='py-0 px-0 -mb-1 w-8 h-5 lg:w-10 lg:h-6 bg-card flex items-center drop-shadow'>
@@ -289,7 +289,7 @@ function CardProd({ prodObj }) {
                   <CardContent className=' mt-auto pb-2 lg:px-4 my-0 pt-0 px-2 ml-1 absolute lg:static top-[138px]'>
                      <div className='flex lg:space-x-2 h-[44px] flex-col space-x-1 space-y-1 items-start justify-end '>
                         {/* ราคาหลังหัก promotion (ใช้ค่าจาก productData) */}
-                        <span className='lg:text-xl font-bold text-blue-600 text-sm'>
+                        <span className='lg:text-xl font-bold text-blue-600 text-sm drop-shadow'>
                            ฿
                            {renderPercentDiscount()
                               ? renderDiscountPrice()
@@ -303,7 +303,7 @@ function CardProd({ prodObj }) {
                      <div className='mt-1 mb-0 flex items-center lg:space-x-1 space-x-0 top-[138px] left-2'>
                         {renderStar(prodObj.avgRating)}
                         <span
-                           className={`lg:text-sm text-gray-500 ml-1 text-xs ${
+                           className={`lg:text-sm text-gray-500 ml-1 text-xs drop-shadow ${
                               prodObj.avgRating ? "" : "text-transparent"
                            }`}
                         >

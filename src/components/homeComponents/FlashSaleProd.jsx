@@ -85,17 +85,17 @@ function FlashSaleProd() {
    const categoryGroups = groupByCategory(products);
 
    return (
-      <section className='w-full mt-6 ml-4 py-6 px-4 rounded-xl shadow-md bg-gradient-to-br from-amber-50 via-orange-50 to-red-50'>
+      <section className='w-full mt-6 ml-4 py-6 px-4 rounded-xl shadow-md bg-gradient-to-br from-amber-100 via-orange-100 to-red-100'>
          {/* Header */}
          <div className='flex flex-col md:flex-row items-center justify-between mb-6 p-4 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl shadow-lg'>
             <div className='flex items-center gap-3 text-white'>
-               <Flame className='w-8 h-8 animate-pulse' />
+               <Flame className='w-8 h-8 drop-shadow animate-pulse' />
                <h2 className='text-2xl md:text-3xl font-bold drop-shadow'>Flash Sale</h2>
             </div>
             {/* Countdown clock*/}
             {countdown && !countdown.isExpired && (
                <div className='flex items-center gap-2 mt-2 md:mt-0'>
-                  <span className='text-white text-sm'>Ends in:</span>
+                  <span className='text-white text-sm '>Ends in:</span>
                   <div className='flex gap-1'>
                      <div className='bg-white text-red-600 px-2 py-1 rounded font-bold text-lg'>
                         {String(countdown.days).padStart(2, "0")}
@@ -121,8 +121,8 @@ function FlashSaleProd() {
          {categoryGroups.map((group, index) => (
             <div key={index} className='mb-8'>
                <div className='flex items-center gap-2 mb-4'>
-                  <Zap className='w-5 h-5 text-amber-500 animate-pulse' />
-                  <h3 className='text-lg font-semibold text-slate-700'>{group.name}</h3>
+                  <Zap className='w-5 h-5 text-amber-500 drop-shadow animate-pulse' />
+                  <h3 className='text-lg font-semibold text-slate-700 drop-shadow'>{group.name}</h3>
                   <span className='text-sm text-slate-500'>({group.products.length} items)</span>
                </div>
                <CarouselAuto maxlg_h={"52"} w={"90dvw"}>
