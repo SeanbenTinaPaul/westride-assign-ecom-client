@@ -125,17 +125,31 @@ const ecomStore = (set, get) => ({
          }
          
          // Case 3: ทั้งสองมี → Merge โดย:
-         // - Items ใน DB: ใช้ข้อมูลจาก DB (เป็น source of truth)
+         // - Items ใน DB: ใช้ข้อมูลจาก DB แต่รักษา countCart ที่สูงกว่า (user อาจเพิ่มแล้วยังไม่ sync)
          // - Items ใน localStorage แต่ไม่อยู่ใน DB: เก็บไว้ (ยังไม่ได้ sync)
          
-         // Convert DB carts to proper format
-         const formattedDbCarts = dbCarts.map((prod) => ({
-            ...prod.product,
-            id: prod.productId,
-            countCart: prod.count,
-            preferDiscount: prod.discount,
-            buyPriceNum: prod.buyPriceNum
-         }));
+         // สร้าง map ของ localStorage เพื่อหา countCart ที่มีอยู่
+         const localCartsMap = new Map();
+         for (const localItem of localCarts) {
+            localCartsMap.set(localItem.id, localItem);
+         }
+         
+         // Convert DB carts และ merge countCart
+         const formattedDbCarts = dbCarts.map((prod) => {
+            const localItem = localCartsMap.get(prod.productId);
+            // ใช้ countCart ที่สูงกว่า: ถ้า localStorage มีค่ามากกว่า = user เพิ่งกด +
+            const mergedCount = localItem 
+               ? Math.max(localItem.countCart || 0, prod.count || 0)
+               : prod.count;
+            
+            return {
+               ...prod.product,
+               id: prod.productId,
+               countCart: mergedCount,
+               preferDiscount: prod.discount,
+               buyPriceNum: prod.buyPriceNum
+            };
+         });
          
          // Find localStorage items not in DB (items added but not synced yet)
          const localOnlyItems = [];
@@ -146,7 +160,7 @@ const ecomStore = (set, get) => ({
             }
          }
          
-         // Merge: DB items + local-only items
+         // Merge: DB items (with preserved countCart) + local-only items
          const mergedCarts = [...formattedDbCarts, ...localOnlyItems];
          set({ carts: mergedCarts });
          

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
+import axios from "axios";
 import { displayProdBy } from "@/api/ProductAuth";
 import CardProd from "../prodCart/CardProd";
 import CarouselAuto from "@/utilities/CarouselAuto";
@@ -11,17 +12,25 @@ function NewProd(props) {
    // SSE: re-fetch when products update
    const sseUpdateTrigger = useEcomStore((state) => state.sseUpdateTrigger);
 
+   // AbortController เพื่อป้องกัน memory leak และ race condition
    useEffect(() => {
+      const controller = new AbortController();
+      
       const fetchProducts = async () => {
          try {
-            const res = await displayProdBy("updatedAt", "desc", 10);
+            const res = await displayProdBy("updatedAt", "desc", 10, controller.signal);
             // console.log("res displayProdBy->", res.data.data);
             setProdArr(res.data.data);
          } catch (err) {
-            console.error("Error fetching products:", err);
+            // ไม่แสดง error ถ้าเป็น cancel จาก AbortController
+            if (!axios.isCancel(err)) {
+               console.error("Error fetching products:", err);
+            }
          }
       };
+      
       fetchProducts();
+      return () => controller.abort();
    }, [sseUpdateTrigger]);
    return (
       <div className='w-full mt-6 ml-4 py-6 px-4 rounded-xl shadow-md bg-gradient-to-r from-card to-slate-100'>

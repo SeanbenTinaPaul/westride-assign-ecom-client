@@ -1,11 +1,13 @@
 //parent → Home.jsx, HomeUser.jsx
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { listFlashSaleProducts } from "@/api/ProductAuth";
 import CardProd from "@/components/prodCart/CardProd";
 import { calculateCountdown } from "@/utilities/flashSaleHelper";
 import { Flame, Zap } from "lucide-react";
 import CarouselAuto from "@/utilities/CarouselAuto";
 import { SwiperSlide } from "swiper/react";
+import useEcomStore from "@/store/ecom-store";
 
 function FlashSaleProd() {
    const [products, setProducts] = useState([]);
@@ -13,26 +15,36 @@ function FlashSaleProd() {
    const [hasFlashSale, setHasFlashSale] = useState(false);
    const [flashSaleEndDate, setFlashSaleEndDate] = useState(null);
    const [countdown, setCountdown] = useState(null);
+   
+   // SSE: re-fetch when sseUpdateTrigger changes (เมื่อ login หรือ product update)
+   const sseUpdateTrigger = useEcomStore((state) => state.sseUpdateTrigger);
 
-   // Fetch flash sale products
+   // Fetch flash sale products พร้อม AbortController เพื่อป้องกัน memory leak
    useEffect(() => {
+      const controller = new AbortController();
+      
       const fetchFlashSale = async () => {
          try {
             setIsLoading(true);
-            const res = await listFlashSaleProducts();
+            const res = await listFlashSaleProducts(controller.signal);
             if (res.data.success) {
                setProducts(res.data.products || []);
                setHasFlashSale(res.data.hasFlashSale);
                setFlashSaleEndDate(res.data.flashSaleEndDate);
             }
          } catch (err) {
-            console.error("Error fetching flash sale products:", err);
+            // ไม่แสดง error ถ้าเป็น cancel จาก AbortController
+            if (!axios.isCancel(err)) {
+               console.error("Error fetching flash sale products:", err);
+            }
          } finally {
             setIsLoading(false);
          }
       };
+      
       fetchFlashSale();
-   }, []);
+      return () => controller.abort();
+   }, [sseUpdateTrigger]); // re-fetch เมื่อ login หรือ SSE update
 
    // Countdown timer
    // แปลงเป็น string เพื่อหลีกเลี่ยง infinite loop (Date object จะสร้างใหม่ทุก render)

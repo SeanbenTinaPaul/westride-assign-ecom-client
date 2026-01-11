@@ -54,8 +54,9 @@ export const searchProductAdmin = async (token, query) => {
 
 //for EditProd.jsx → FormEditProd.jsx
 //backend res.json()
-export const readProduct = async (id) => {
-   return await axios.get(`${apiUrl}/api/product/${id}`);
+// signal param: เพิ่มเพื่อรองรับ AbortController จาก useEffect cleanup
+export const readProduct = async (id, signal) => {
+   return await axios.get(`${apiUrl}/api/product/${id}`, { signal });
 };
 
 //for CarouselBanner.jsx → lightweight images only
@@ -64,8 +65,9 @@ export const readProductImages = async (id) => {
 };
 
 //for FlashSaleProd.jsx → get products with active flash sale
-export const listFlashSaleProducts = async () => {
-   return await axios.get(`${apiUrl}/api/products/flash-sale`);
+// signal param: เพิ่มเพื่อรองรับ AbortController จาก useEffect cleanup
+export const listFlashSaleProducts = async (signal) => {
+   return await axios.get(`${apiUrl}/api/products/flash-sale`, { signal });
 };
 
 //backend res.json()
@@ -139,8 +141,9 @@ export const seachFilterProd = async (filter) => {
    return await axios.post(`${apiUrl}/api/search-filters`, filter);
 };
 
-export const displayProdBy = async (sort = "sold", order = "desc", limit = 5) => {
-   return await axios.post(`${apiUrl}/api/display-prod-by`, { sort, order, limit });
+// signal param: เพิ่มเพื่อรองรับ AbortController จาก useEffect cleanup
+export const displayProdBy = async (sort = "sold", order = "desc", limit = 5, signal) => {
+   return await axios.post(`${apiUrl}/api/display-prod-by`, { sort, order, limit }, { signal });
 };
 export const displayProdByUser = async (token) => {
    return await axios.get(`${apiUrl}/api/display-prod-by-user`, {

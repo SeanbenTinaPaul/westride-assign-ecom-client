@@ -1,17 +1,18 @@
 //parent → Cart.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import PropTypes from "prop-types";
 import { Link, useNavigate } from "react-router-dom";
 import { createCartUser } from "@/api/userAuth";
 import useEcomStore from "@/store/ecom-store";
 import { formatNumber } from "@/utilities/formatNumber";
 import { getPercentDiscount, calculateCartTotals } from "@/utilities/discountHelper";
+import { getFlashSaleInfo, formatFlashSaleDate, calculateCountdown, formatCountdown } from "@/utilities/flashSaleHelper";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/hooks/use-toast";
 
-import { ListChecks, Trash2, Slack } from "lucide-react";
+import { ListChecks, Trash2, Slack, Zap, Flame } from "lucide-react";
 
 function CartCheckout({ isCollapsedContext }) {
    // ดึง cartTotals จาก store (คำนวณจาก backend)
@@ -102,6 +103,44 @@ function CartCheckout({ isCollapsedContext }) {
       return getPercentDiscount(cart?.promotion, cart?.discounts);
    };
 
+   // Flash Sale: คำนวณ countdown สำหรับแต่ละสินค้าใน cart
+   const [flashCountdowns, setFlashCountdowns] = useState({});
+
+   // สร้าง map ของ flashSaleInfo สำหรับแต่ละ cart item
+   const flashSaleInfoMap = useMemo(() => {
+      const map = {};
+      for (const cart of carts) {
+         map[cart.id] = getFlashSaleInfo(cart?.discounts);
+      }
+      return map;
+   }, [carts]);
+
+   // Effect สำหรับ countdown timer ของทุกสินค้า
+   useEffect(() => {
+      const activeItems = Object.entries(flashSaleInfoMap)
+         .filter(([, info]) => info?.status === "active" && info?.endDate);
+      
+      if (activeItems.length === 0) return;
+
+      // Initial countdown
+      const initCountdowns = {};
+      for (const [id, info] of activeItems) {
+         initCountdowns[id] = calculateCountdown(info.endDate);
+      }
+      setFlashCountdowns(initCountdowns);
+
+      // Update ทุก 1 วินาที
+      const interval = setInterval(() => {
+         const newCountdowns = {};
+         for (const [id, info] of activeItems) {
+            newCountdowns[id] = calculateCountdown(info.endDate);
+         }
+         setFlashCountdowns(newCountdowns);
+      }, 1000);
+
+      return () => clearInterval(interval);
+   }, [flashSaleInfoMap]);
+
    const handleRmCart = (prodId) => {
       removeCart(prodId);
    };
@@ -145,13 +184,29 @@ function CartCheckout({ isCollapsedContext }) {
                            </section>
                            {/* badge+title+desc */}
                            <section className='flex flex-col justify-between w-3/4 h-28 mx-4'>
-                              {renderPercentDiscount(cart) && (
+                              {/* Flash Sale Badge */}
+                              {flashSaleInfoMap[cart.id]?.status === "pending" ? (
+                                 <div className='flex gap-1'>
+                                    <Badge className='bg-amber-500 px-1 flex items-center gap-1'>
+                                       <Zap className='w-3 h-3' />
+                                       {formatFlashSaleDate(flashSaleInfoMap[cart.id]?.startDate)}
+                                    </Badge>
+                                    <Badge className='bg-amber-500 px-1'>-??%</Badge>
+                                 </div>
+                              ) : flashSaleInfoMap[cart.id]?.status === "active" && flashCountdowns[cart.id] && !flashCountdowns[cart.id]?.isExpired ? (
+                                 <div>
+                                    <Badge className='bg-red-500 px-1 flex items-center gap-1 w-fit'>
+                                       <Flame className='w-3 h-3 animate-pulse' />
+                                       {formatCountdown(flashCountdowns[cart.id])} -{renderPercentDiscount(cart)}%
+                                    </Badge>
+                                 </div>
+                              ) : renderPercentDiscount(cart) ? (
                                  <div>
                                     <Badge className='bg-red-500 px-1'>
                                        -{renderPercentDiscount(cart)}%
                                     </Badge>
                                  </div>
-                              )}
+                              ) : null}
                               <div className='border-b ml-1'>
                                  <p className='font-medium text-sm whitespace-normal break-words'>
                                     {cart.title}
@@ -162,9 +217,13 @@ function CartCheckout({ isCollapsedContext }) {
                               </div>
                               <div className='flex justify-start items-start gap-2 mb-4'>
                                  <Badge className='py-0 px-0 w-10 h-6 bg-card flex items-center drop-shadow'>
-                                    {cart.brand?.img_url ? (
+                                    {/* ตรวจสอบว่า brand object พร้อมแล้วหรือยัง */}
+                                    {cart.brand === undefined ? (
+                                       // Loading skeleton เมื่อยังไม่มี brand data
+                                       <div className='w-5 h-5 mx-auto bg-slate-200 rounded animate-pulse' />
+                                    ) : cart.brand?.img_url ? (
                                        <img
-                                          src={cart.brand?.img_url}
+                                          src={cart.brand.img_url}
                                           alt=''
                                           className='w-full h-full rounded-md mx-auto object-center object-contain'
                                           title={
@@ -176,12 +235,13 @@ function CartCheckout({ isCollapsedContext }) {
                                     ) : (
                                        <Slack className='w-5 h-5 mx-auto fill-current text-slate-500 font-thin' />
                                     )}
-                                    {/* <p className='text-sm text-gray-500 max-lg:text-xs'>Brand title</p> */}
                                  </Badge>
                                  <p className='text-base font-light text-gray-500 '>
-                                    {cart.brand?.title == "No brand"
-                                       ? "Exclusive Selection"
-                                       : cart.brand?.title}
+                                    {cart.brand === undefined 
+                                       ? "" 
+                                       : cart.brand?.title == "No brand"
+                                          ? "Exclusive Selection"
+                                          : cart.brand?.title}
                                  </p>
                               </div>
                               {cart?.preferDiscount ? (

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
+import axios from "axios";
 import { displayProdBy } from "@/api/ProductAuth";
 import CardProd from "../prodCart/CardProd";
 import useEcomStore from "@/store/ecom-store";
@@ -9,17 +10,25 @@ function BestSeller(props) {
    // SSE: re-fetch when products update
    const sseUpdateTrigger = useEcomStore((state) => state.sseUpdateTrigger);
 
+   // AbortController เพื่อป้องกัน memory leak และ race condition
    useEffect(() => {
+      const controller = new AbortController();
+      
       const fetchProducts = async () => {
          try {
-            const res = await displayProdBy("sold", "desc", 5);
+            const res = await displayProdBy("sold", "desc", 5, controller.signal);
             // console.log("res BestSeller->", res.data.data);
             setProdArr(res.data.data);
          } catch (err) {
-            console.error("Error fetching products:", err);
+            // ไม่แสดง error ถ้าเป็น cancel จาก AbortController
+            if (!axios.isCancel(err)) {
+               console.error("Error fetching products:", err);
+            }
          }
       };
+      
       fetchProducts();
+      return () => controller.abort();
    }, [sseUpdateTrigger]);
 
    const colorTag = (i) => {

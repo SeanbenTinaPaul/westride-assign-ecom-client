@@ -16,6 +16,7 @@ import { createCartUser } from "@/api/userAuth";
 import { Link, useParams, useNavigate } from "react-router-dom";
 
 import { readProduct } from "@/api/ProductAuth";
+import axios from "axios";
 import { toggleFavoriteUser } from "@/api/userAuth";
 import { SwiperSlide } from "swiper/react";
 import CarouselThumnailProd from "@/utilities/CarouselThumnailProd";
@@ -247,11 +248,14 @@ function ViewProdUser() {
       }
    };
 
+   // AbortController เพื่อป้องกัน memory leak และ race condition เมื่อ user สลับหน้า product เร็วๆ
    useEffect(() => {
+      const controller = new AbortController();
+      
       const fetchData = async () => {
          try {
             setIsLoading(true);
-            const res = await readProduct(id);
+            const res = await readProduct(id, controller.signal);
             // console.log("res data readProd->", res.data);
             setProductData((prev) => ({ ...prev, ...res.data.data }));
             setImagArr(res.data.data.images);
@@ -261,20 +265,24 @@ function ViewProdUser() {
             setProdOnOrder(res.data.prodOnOrder);
             await getCategory(); //random solution to trigger contents in navigte path to rerender
          } catch (err) {
-            console.error("Error fetching product:", err);
-            toast({
-               variant: "destructive",
-               title: "Error",
-               description: "Failed to load product details"
-            });
-            // redirect if cant fetch this prod
-            navigate(-1, { replace: true });
+            // ไม่แสดง error/toast ถ้าเป็น cancel จาก AbortController
+            if (!axios.isCancel(err)) {
+               console.error("Error fetching product:", err);
+               toast({
+                  variant: "destructive",
+                  title: "Error",
+                  description: "Failed to load product details"
+               });
+               // redirect if cant fetch this prod
+               navigate(-1, { replace: true });
+            }
          } finally {
             setIsLoading(false);
          }
       };
 
       fetchData();
+      return () => controller.abort();
    }, [id, sseUpdateTrigger]);  // SSE: re-fetch when sseUpdateTrigger changes
    // Sync with cart data
    useEffect(() => {
